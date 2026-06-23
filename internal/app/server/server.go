@@ -71,6 +71,9 @@ func New(ctx context.Context, opts config.ServerOpts, log *logger.Logger) (*App,
 			Interval:  opts.Worker.Interval,
 			BatchSize: opts.Worker.BatchSize,
 		}))
+		// The widget-count poller refreshes the cached count served by
+		// GET /widgets/count; it is a worker.Runnable supervised here.
+		group.Add(d.WidgetCount(ctx))
 	}
 	if opts.Broker.Enabled {
 		if err := addBrokerWorkers(ctx, opts, d, group, m); err != nil {

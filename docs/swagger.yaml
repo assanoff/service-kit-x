@@ -1,5 +1,10 @@
 components:
   schemas:
+    widget.CountResponse:
+      properties:
+        count:
+          type: integer
+      type: object
     widget.CreateWidgetReq:
       properties:
         description:
@@ -190,6 +195,18 @@ paths:
                 type: string
           description: not found
       summary: Update a widget
+      tags:
+      - widgets
+  /widgets/count:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/widget.CountResponse'
+          description: OK
+      summary: Cached widget count
       tags:
       - widgets
   /widgets/import:

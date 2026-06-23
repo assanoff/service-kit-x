@@ -2,9 +2,11 @@ package deps
 
 import (
 	"context"
+	"time"
 
 	"github.com/assanoff/servicekit/dim"
 	"github.com/assanoff/servicekit/outbox"
+	"github.com/assanoff/servicekit/poller"
 
 	widgetapi "github.com/assanoff/service-kit-x/api/widget"
 	"github.com/assanoff/service-kit-x/core/widget"
@@ -20,7 +22,10 @@ import (
 var initWidgetCore = func(c *Deps) (dim.CleanupFunc, error) {
 	c.WidgetCore = dim.OnceWithName("WidgetCore", func(ctx context.Context) (*widget.Core, error) {
 		store := widgetdb.NewStore(c.Logger, c.DB(ctx))
-		var opts []widget.Option
+
+		// In-process dispatch is always on (a bus with no consumers is a no-op);
+		// the durable outbox is added only when the broker is enabled.
+		opts := []widget.Option{widget.WithEventBus(c.Bus(ctx))}
 		if c.Opts.Broker.Enabled {
 			reg := outbox.NewRegistry()
 			outbox.Register[widget.Created](reg,
@@ -43,11 +48,27 @@ var initWidgetImport = func(c *Deps) (dim.CleanupFunc, error) {
 	return nil, nil
 }
 
+// initWidgetCount builds a poller that caches the total widget count, refreshed
+// on an interval, so the GET /widgets/count endpoint serves it cheaply without
+// querying Postgres on every request. The poller is a worker.Runnable, supervised
+// in the server's worker.Group; Current() reads the cached value lock-free-ish.
+var initWidgetCount = func(c *Deps) (dim.CleanupFunc, error) {
+	c.WidgetCount = dim.OnceWithName("WidgetCount", func(ctx context.Context) (*poller.Poller[int], error) {
+		core := c.WidgetCore(ctx)
+		return poller.New(c.Logger.Slog(), 0, core.Count, poller.Config{
+			Name:        "widget-count",
+			Interval:    c.Opts.Worker.CountInterval,
+			PollTimeout: 5 * time.Second,
+		}), nil
+	})
+	return nil, nil
+}
+
 // initWidgetHandler builds the REST handler for widgets, including the
-// background-import endpoint.
+// background-import endpoint and the cached-count endpoint.
 var initWidgetHandler = func(c *Deps) (dim.CleanupFunc, error) {
 	c.WidgetHandler = dim.OnceWithName("WidgetHandler", func(ctx context.Context) (*widgetapi.Handler, error) {
-		return widgetapi.New(c.WidgetCore(ctx), c.WidgetImport(ctx)), nil
+		return widgetapi.New(c.WidgetCore(ctx), c.WidgetImport(ctx), c.WidgetCount(ctx)), nil
 	})
 	return nil, nil
 }

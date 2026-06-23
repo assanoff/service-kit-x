@@ -143,15 +143,27 @@ func TestWidgetOutboxE2E(t *testing.T) {
 		t.Errorf("audit payload mismatch: got %+v, want id=%s name=e2e-gadget", payload, w.ID)
 	}
 
-	// The outbox row reached its terminal sent state.
+	// The outbox row reaches its terminal sent state. The relay marks it sent
+	// after a successful publish, which can land just after the consumer recorded
+	// the audit row above, so poll rather than read once.
 	var status string
-	if err := db.GetContext(ctx, &status,
-		`SELECT status FROM outbox_events WHERE type = $1 ORDER BY created_at DESC LIMIT 1`,
-		widget.EventWidgetCreated); err != nil {
-		t.Fatalf("query outbox status: %v", err)
-	}
-	if status != outbox.StatusSent {
-		t.Errorf("outbox status = %q, want sent", status)
+	statusDeadline := time.After(10 * time.Second)
+	for {
+		if err := db.GetContext(ctx, &status,
+			`SELECT status FROM outbox_events WHERE type = $1 ORDER BY created_at DESC LIMIT 1`,
+			widget.EventWidgetCreated); err != nil {
+			t.Fatalf("query outbox status: %v", err)
+		}
+		if status == outbox.StatusSent {
+			break
+		}
+		select {
+		case <-statusDeadline:
+			t.Errorf("outbox status = %q, want sent", status)
+		case <-time.After(200 * time.Millisecond):
+			continue
+		}
+		break
 	}
 
 	// Trace continuation: the consumer should have opened a span that is a child

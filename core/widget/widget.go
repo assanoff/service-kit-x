@@ -13,6 +13,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/assanoff/servicekit/errs"
+	"github.com/assanoff/servicekit/eventbus"
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/outbox"
 	"github.com/assanoff/servicekit/sqldb"
@@ -29,6 +30,7 @@ type Store interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	QueryByID(ctx context.Context, id uuid.UUID) (Widget, error)
 	Query(ctx context.Context) ([]Widget, error)
+	Count(ctx context.Context) (int, error)
 }
 
 // Core implements the widget business logic.
@@ -42,6 +44,11 @@ type Core struct {
 	db     *sqlx.DB
 	outbox outbox.Store
 	reg    *outbox.Registry
+
+	// Optional in-process event bus. When set, Create dispatches a synchronous,
+	// best-effort widget.created event after the write (the in-process complement
+	// to the durable outbox above). nil disables in-process dispatch.
+	bus *eventbus.Bus
 }
 
 // Option customizes a Core.
@@ -57,6 +64,16 @@ func WithOutbox(db *sqlx.DB, store outbox.Store, reg *outbox.Registry) Option {
 		c.outbox = store
 		c.reg = reg
 	}
+}
+
+// WithEventBus enables in-process event dispatch: after a widget is created,
+// Create publishes a (widget, created) event on the bus for any registered
+// in-process consumers (e.g. a webhook notifier). Dispatch is synchronous and
+// best-effort — a consumer's failure is logged by the bus but does not roll back
+// the write or fail the request. This is independent of WithOutbox: a Core may
+// use neither, either, or both.
+func WithEventBus(bus *eventbus.Bus) Option {
+	return func(c *Core) { c.bus = bus }
 }
 
 // NewCore constructs a Core.
@@ -108,7 +125,30 @@ func (c *Core) Create(ctx context.Context, nw NewWidget) (Widget, error) {
 		}
 		return Widget{}, errs.New(errs.Internal, err)
 	}
+
+	// In-process, synchronous, best-effort notification. Unlike the outbox above
+	// (durable, transactional, cross-service), these handlers run now on this
+	// goroutine; their failure is logged by the bus but never fails the create.
+	if c.bus != nil {
+		_ = c.bus.Publish(ctx, eventbus.MustData(EventBusDomain, EventBusActionCreated, Created{
+			ID:          w.ID.String(),
+			Name:        w.Name,
+			Description: w.Description,
+			CreatedAt:   w.CreatedAt,
+		}))
+	}
 	return w, nil
+}
+
+// Count returns the total number of widgets. It backs the cached widget-count
+// poller (see the app wiring), which refreshes it on an interval so hot read
+// paths can serve the count without hitting the database each call.
+func (c *Core) Count(ctx context.Context) (int, error) {
+	n, err := c.store.Count(ctx)
+	if err != nil {
+		return 0, errs.New(errs.Internal, err)
+	}
+	return n, nil
 }
 
 // QueryByID returns a widget or a NotFound error.

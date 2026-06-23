@@ -9,6 +9,15 @@ import (
 // EventWidgetCreated is the CloudEvents type published when a widget is created.
 const EventWidgetCreated = "widget.created"
 
+// EventBusDomain and the EventBusAction* constants name the in-process events
+// dispatched on the eventbus — the synchronous, in-process complement to the
+// transactional outbox. Consumers register handlers for (EventBusDomain, action)
+// without importing this package's Core; the producer only names the event.
+const (
+	EventBusDomain        = "widget"
+	EventBusActionCreated = "created"
+)
+
 // Widget is the domain entity.
 type Widget struct {
 	ID          uuid.UUID

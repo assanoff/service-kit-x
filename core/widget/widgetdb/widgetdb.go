@@ -105,6 +105,18 @@ func (s *Store) BulkInsert(ctx context.Context, ws []widget.Widget) error {
 	return nil
 }
 
+// Count implements widget.Store.
+func (s *Store) Count(ctx context.Context) (int, error) {
+	const q = `SELECT count(*) AS n FROM widgets`
+	var row struct {
+		N int `db:"n"`
+	}
+	if err := sqldb.QueryStruct(ctx, s.log, s.db, q, &row); err != nil {
+		return 0, fmt.Errorf("count: %w", err)
+	}
+	return row.N, nil
+}
+
 // Query implements widget.Store.
 func (s *Store) Query(ctx context.Context) ([]widget.Widget, error) {
 	const q = `SELECT id, name, description, created_at, updated_at FROM widgets ORDER BY created_at DESC`

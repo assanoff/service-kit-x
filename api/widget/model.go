@@ -32,6 +32,11 @@ type ImportResponse struct {
 	Count     int  `json:"count"`
 }
 
+// CountResponse is the cached total widget count.
+type CountResponse struct {
+	Count int `json:"count"`
+}
+
 // Response is the REST representation of a widget.
 type Response struct {
 	ID          string    `json:"id"`

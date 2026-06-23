@@ -17,15 +17,22 @@ import (
 	"github.com/assanoff/service-kit-x/core/widgetimport"
 )
 
+// Counter reports a cached widget count. It is satisfied by a poller.Poller[int],
+// which refreshes the count in the background so the read is cheap.
+type Counter interface {
+	Current() int
+}
+
 // Handler exposes widget endpoints.
 type Handler struct {
 	core     *widgetcore.Core
 	importer *widgetimport.Importer
+	counter  Counter
 }
 
 // New builds a Handler.
-func New(core *widgetcore.Core, importer *widgetimport.Importer) *Handler {
-	return &Handler{core: core, importer: importer}
+func New(core *widgetcore.Core, importer *widgetimport.Importer, counter Counter) *Handler {
+	return &Handler{core: core, importer: importer, counter: counter}
 }
 
 // Routes registers the widget endpoints on r. Reads are public; writes are
@@ -33,6 +40,7 @@ func New(core *widgetcore.Core, importer *widgetimport.Importer) *Handler {
 // require authorization when auth is enabled.
 func (h *Handler) Routes(r *router.Router, authMW ...router.Middleware) {
 	r.HandleApp("GET /widgets", h.query)
+	r.HandleApp("GET /widgets/count", h.count)
 	r.HandleApp("GET /widgets/{id}", h.queryByID)
 
 	w := r
@@ -111,6 +119,18 @@ func (h *Handler) query(ctx context.Context, _ *http.Request) rest.Encoder {
 		return errs.From(err)
 	}
 	return rest.JSON(toResponses(ws))
+}
+
+// count returns the cached total widget count. The value is refreshed in the
+// background by a poller, so this read is cheap and never hits the database.
+//
+//	@Summary	Cached widget count
+//	@Tags		widgets
+//	@Produce	json
+//	@Success	200	{object}	CountResponse
+//	@Router		/widgets/count [get]
+func (h *Handler) count(_ context.Context, _ *http.Request) rest.Encoder {
+	return rest.JSON(CountResponse{Count: h.counter.Current()})
 }
 
 // queryByID returns one widget by id.

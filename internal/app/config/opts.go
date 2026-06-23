@@ -12,14 +12,15 @@ type ServerOpts struct {
 	Env      string `long:"app-env"      env:"APP_ENV"      default:"development"         description:"runtime environment"`
 	LogLevel string `long:"log-level"    env:"LOG_LEVEL"    default:"info"                description:"log level: debug|info|warn|error"`
 
-	HTTP   HTTP   `group:"http" namespace:"http" env-namespace:"HTTP"`
-	GRPC   GRPC   `group:"grpc" namespace:"grpc" env-namespace:"GRPC"`
-	Debug  Debug  `group:"debug" namespace:"debug" env-namespace:"DEBUG"`
-	DB     DB     `group:"postgres" namespace:"db" env-namespace:"DB"`
-	OTEL   OTEL   `group:"otel" namespace:"otel" env-namespace:"OTEL"`
-	Worker Worker `group:"worker" namespace:"worker" env-namespace:"WORKER"`
-	Broker Broker `group:"broker" namespace:"broker" env-namespace:"BROKER"`
-	Auth   Auth   `group:"auth" namespace:"auth" env-namespace:"AUTH"`
+	HTTP    HTTP    `group:"http" namespace:"http" env-namespace:"HTTP"`
+	GRPC    GRPC    `group:"grpc" namespace:"grpc" env-namespace:"GRPC"`
+	Debug   Debug   `group:"debug" namespace:"debug" env-namespace:"DEBUG"`
+	DB      DB      `group:"postgres" namespace:"db" env-namespace:"DB"`
+	OTEL    OTEL    `group:"otel" namespace:"otel" env-namespace:"OTEL"`
+	Worker  Worker  `group:"worker" namespace:"worker" env-namespace:"WORKER"`
+	Broker  Broker  `group:"broker" namespace:"broker" env-namespace:"BROKER"`
+	Auth    Auth    `group:"auth" namespace:"auth" env-namespace:"AUTH"`
+	Webhook Webhook `group:"webhook" namespace:"webhook" env-namespace:"WEBHOOK"`
 }
 
 // HTTP holds REST server settings. REST and gRPC run together or independently;
@@ -69,9 +70,10 @@ type DB struct {
 // consumer. Like the servers, it is on by default and disabled via its
 // kill-switch.
 type Worker struct {
-	Disabled  bool          `long:"disabled"   env:"DISABLED"   description:"disable background workers"`
-	Interval  time.Duration `long:"interval"   env:"INTERVAL"   default:"1s" description:"queue poll interval"`
-	BatchSize int           `long:"batch-size" env:"BATCH_SIZE" default:"50" description:"max tasks claimed per tick"`
+	Disabled      bool          `long:"disabled"       env:"DISABLED"       description:"disable background workers"`
+	Interval      time.Duration `long:"interval"       env:"INTERVAL"       default:"1s" description:"queue poll interval"`
+	BatchSize     int           `long:"batch-size"     env:"BATCH_SIZE"     default:"50" description:"max tasks claimed per tick"`
+	CountInterval time.Duration `long:"count-interval" env:"COUNT_INTERVAL" default:"5s" description:"widget-count poller refresh interval"`
 }
 
 // Broker holds RabbitMQ + transactional-outbox settings. It is OFF by default
@@ -99,6 +101,19 @@ type Auth struct {
 	Issuer       string `long:"issuer"        env:"ISSUER"        default:"" description:"expected JWT issuer (optional)"`
 	Audience     string `long:"audience"      env:"AUDIENCE"      default:"" description:"expected JWT audience (optional)"`
 	RequiredRole string `long:"required-role" env:"REQUIRED_ROLE" default:"widget:write" description:"role required for widget writes"`
+}
+
+// Webhook holds the outbound widget.created webhook settings. OFF by default
+// (it needs an external receiver). When enabled, an in-process eventbus consumer
+// POSTs each created widget to URL using a resilient HTTP client that retries
+// 429/503 with backoff (httpmw). It is independent of the broker/outbox.
+type Webhook struct {
+	Enabled     bool          `long:"enabled"      env:"ENABLED"      description:"POST widget.created to a webhook via the resilient HTTP client"`
+	URL         string        `long:"url"          env:"URL"          default:""      description:"webhook endpoint receiving widget.created notifications"`
+	Timeout     time.Duration `long:"timeout"      env:"TIMEOUT"      default:"3s"    description:"per-attempt timeout for webhook delivery"`
+	MaxAttempts int           `long:"max-attempts" env:"MAX_ATTEMPTS" default:"4"     description:"max delivery attempts (retries on 429/503)"`
+	BackoffBase time.Duration `long:"backoff-base" env:"BACKOFF_BASE" default:"200ms" description:"first retry delay"`
+	BackoffMax  time.Duration `long:"backoff-max"  env:"BACKOFF_MAX"  default:"5s"    description:"max retry delay (cap)"`
 }
 
 // OTEL holds tracing settings.

@@ -1,6 +1,14 @@
 {
     "components": {
         "schemas": {
+            "widget.CountResponse": {
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
             "widget.CreateWidgetReq": {
                 "properties": {
                     "description": {
@@ -160,6 +168,26 @@
                     }
                 },
                 "summary": "Create a widget",
+                "tags": [
+                    "widgets"
+                ]
+            }
+        },
+        "/widgets/count": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/widget.CountResponse"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "Cached widget count",
                 "tags": [
                     "widgets"
                 ]

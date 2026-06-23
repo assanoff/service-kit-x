@@ -13,9 +13,11 @@ import (
 	"github.com/assanoff/servicekit/broker/rabbitmq"
 	"github.com/assanoff/servicekit/closer"
 	"github.com/assanoff/servicekit/dim"
+	"github.com/assanoff/servicekit/eventbus"
 	"github.com/assanoff/servicekit/i18n"
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/outbox"
+	"github.com/assanoff/servicekit/poller"
 	"github.com/assanoff/servicekit/queue"
 
 	widgetapi "github.com/assanoff/service-kit-x/api/widget"
@@ -38,9 +40,11 @@ type Deps struct {
 	Outbox     dim.Provider[outbox.Store]
 	Translator dim.Provider[*i18n.Translator]
 	Verifier   dim.Provider[auth.Verifier]
+	Bus        dim.Provider[*eventbus.Bus]
 
 	WidgetCore    dim.Provider[*widget.Core]
 	WidgetImport  dim.Provider[*widgetimport.Importer]
+	WidgetCount   dim.Provider[*poller.Poller[int]]
 	WidgetHandler dim.Provider[*widgetapi.Handler]
 	WidgetGRPC    dim.Provider[*widgetgrpc.Handler]
 }
@@ -54,10 +58,12 @@ var Initializers = []func(*Deps) (dim.CleanupFunc, error){
 	initBroker,
 	initTranslator,
 	initAuth,
+	initBus,
 
 	// Core business logic
 	initWidgetCore,
 	initWidgetImport,
+	initWidgetCount,
 
 	// Handlers
 	initWidgetHandler,
