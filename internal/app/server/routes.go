@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/assanoff/servicekit/auditlog"
+	"github.com/assanoff/servicekit/auditlog/auditrest"
 	"github.com/assanoff/servicekit/auth"
 	"github.com/assanoff/servicekit/debugsrv"
 	"github.com/assanoff/servicekit/errs"
@@ -33,9 +35,10 @@ func buildRouter(ctx context.Context, d *deps.Deps, m *metrics.Metrics, debug *d
 	tracer := d.Tracer(ctx)
 	translator := d.Translator(ctx)
 
-	// localizeErrors is an app middleware (outermost) that localizes any
-	// *errs.Error response using the request language resolved from
-	// Accept-Language by the i18n middleware below.
+	// localizeErrors (outermost app middleware) localizes any *errs.Error response.
+	// Audit recording is NOT a transport concern here — the widget domain emits
+	// audit events on the eventbus (see core/widget), which covers REST, gRPC and
+	// background paths uniformly.
 	r := router.New(localizeErrors(translator))
 
 	// Global middleware — safe for every route including debug. Access logging
@@ -84,6 +87,34 @@ func buildRouter(ctx context.Context, d *deps.Deps, m *metrics.Metrics, debug *d
 		}
 	}
 	d.WidgetHandler(ctx).Routes(api, authMW...)
+
+	// Audit-log read API (history / diff / changed-fields), mounted in one call.
+	// Reads are public here; pass authMW to restrict them to admins if needed.
+	auditrest.NewHandlers(d.AuditLog(ctx)).Routes(api)
+
+	// Admin: trigger one compaction batch on demand. Protected by authMW when auth
+	// is enabled. Scheduled compaction is wired separately via the worker package
+	// (see app/server: a worker.Loop calling AuditLog.CompactBatch).
+	adminAudit := api
+	if len(authMW) > 0 {
+		adminAudit = api.With(authMW...)
+	}
+	a := d.Opts.Audit
+	adminAudit.HandleApp("POST /auditlog/compact", func(ctx context.Context, _ *http.Request) rest.Encoder {
+		res, err := d.AuditLog(ctx).CompactBatch(ctx, auditlog.CompactBatchOptions{
+			Threshold: a.CompactThreshold,
+			Limit:     a.CompactLimit,
+			Compact: auditlog.CompactOptions{
+				Factor:      a.Factor,
+				KeepRecent:  a.KeepRecent,
+				MaxVersions: a.MaxVersions,
+			},
+		})
+		if err != nil {
+			return errs.New(errs.Internal, err)
+		}
+		return rest.JSON(map[string]int{"models": res.Models, "deleted": res.Deleted})
+	})
 
 	return r
 }

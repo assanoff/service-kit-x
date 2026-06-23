@@ -9,6 +9,10 @@ import (
 // EventWidgetCreated is the CloudEvents type published when a widget is created.
 const EventWidgetCreated = "widget.created"
 
+// AuditModelType is the auditlog model type for widgets, shared by the REST and
+// gRPC transports so a widget's audit history is keyed consistently.
+const AuditModelType = "widget"
+
 // EventBusDomain and the EventBusAction* constants name the in-process events
 // dispatched on the eventbus — the synchronous, in-process complement to the
 // transactional outbox. Consumers register handlers for (EventBusDomain, action)

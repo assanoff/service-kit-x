@@ -8,6 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/assanoff/servicekit/auditlog"
 	"github.com/assanoff/servicekit/auth"
 	"github.com/assanoff/servicekit/broker"
 	"github.com/assanoff/servicekit/broker/rabbitmq"
@@ -41,6 +42,7 @@ type Deps struct {
 	Translator dim.Provider[*i18n.Translator]
 	Verifier   dim.Provider[auth.Verifier]
 	Bus        dim.Provider[*eventbus.Bus]
+	AuditLog   dim.Provider[*auditlog.Core]
 
 	WidgetCore    dim.Provider[*widget.Core]
 	WidgetImport  dim.Provider[*widgetimport.Importer]
@@ -59,6 +61,7 @@ var Initializers = []func(*Deps) (dim.CleanupFunc, error){
 	initTranslator,
 	initAuth,
 	initBus,
+	initAuditLog,
 
 	// Core business logic
 	initWidgetCore,

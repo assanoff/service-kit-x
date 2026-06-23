@@ -21,6 +21,7 @@ type ServerOpts struct {
 	Broker  Broker  `group:"broker" namespace:"broker" env-namespace:"BROKER"`
 	Auth    Auth    `group:"auth" namespace:"auth" env-namespace:"AUTH"`
 	Webhook Webhook `group:"webhook" namespace:"webhook" env-namespace:"WEBHOOK"`
+	Audit   Audit   `group:"audit" namespace:"audit" env-namespace:"AUDIT"`
 }
 
 // HTTP holds REST server settings. REST and gRPC run together or independently;
@@ -114,6 +115,19 @@ type Webhook struct {
 	MaxAttempts int           `long:"max-attempts" env:"MAX_ATTEMPTS" default:"4"     description:"max delivery attempts (retries on 429/503)"`
 	BackoffBase time.Duration `long:"backoff-base" env:"BACKOFF_BASE" default:"200ms" description:"first retry delay"`
 	BackoffMax  time.Duration `long:"backoff-max"  env:"BACKOFF_MAX"  default:"5s"    description:"max retry delay (cap)"`
+}
+
+// Audit holds audit-log compaction settings. Inline auto-compaction thins a
+// model's history opportunistically on write (every AutoCompactEvery versions);
+// the POST /auditlog/compact admin endpoint and any sweeper use the same Factor/
+// KeepRecent/MaxVersions thinning over models above CompactThreshold.
+type Audit struct {
+	AutoCompactEvery int `long:"auto-compact-every" env:"AUTO_COMPACT_EVERY" default:"100" description:"compact a model inline every N versions (0 disables)"`
+	Factor           int `long:"factor"             env:"FACTOR"             default:"4"   description:"keep every N-th middle version"`
+	KeepRecent       int `long:"keep-recent"        env:"KEEP_RECENT"        default:"20"  description:"always keep the newest N versions"`
+	MaxVersions      int `long:"max-versions"       env:"MAX_VERSIONS"       default:"0"   description:"cap total kept versions (0 = unlimited)"`
+	CompactThreshold int `long:"compact-threshold"  env:"COMPACT_THRESHOLD"  default:"100" description:"only compact models with more than this many versions"`
+	CompactLimit     int `long:"compact-limit"      env:"COMPACT_LIMIT"      default:"100" description:"max models compacted per batch call"`
 }
 
 // OTEL holds tracing settings.

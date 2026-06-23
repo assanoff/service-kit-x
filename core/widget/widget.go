@@ -6,12 +6,15 @@ package widget
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/assanoff/servicekit/auditlog/auditbus"
+	"github.com/assanoff/servicekit/auth"
 	"github.com/assanoff/servicekit/errs"
 	"github.com/assanoff/servicekit/eventbus"
 	"github.com/assanoff/servicekit/logger"
@@ -137,6 +140,7 @@ func (c *Core) Create(ctx context.Context, nw NewWidget) (Widget, error) {
 			CreatedAt:   w.CreatedAt,
 		}))
 	}
+	c.publishAudit(ctx, w)
 	return w, nil
 }
 
@@ -192,7 +196,42 @@ func (c *Core) Update(ctx context.Context, id uuid.UUID, uw UpdateWidget) (Widge
 	if err := c.store.Update(ctx, w); err != nil {
 		return Widget{}, errs.New(errs.Internal, err)
 	}
+	c.publishAudit(ctx, w)
 	return w, nil
+}
+
+// publishAudit emits a best-effort audit event for w on the in-process bus. The
+// auditbus consumer (wired at startup) records a versioned snapshot. Doing this in
+// the domain — not in a transport middleware — means every path (REST, gRPC,
+// workers) that mutates a widget is audited the same way.
+func (c *Core) publishAudit(ctx context.Context, w Widget) {
+	if c.bus == nil {
+		return
+	}
+	payload, err := json.Marshal(map[string]any{
+		"id":          w.ID.String(),
+		"name":        w.Name,
+		"description": w.Description,
+		"created_at":  w.CreatedAt,
+		"updated_at":  w.UpdatedAt,
+	})
+	if err != nil {
+		return
+	}
+	_ = auditbus.Publish(ctx, c.bus, auditbus.Event{
+		ModelType: AuditModelType,
+		ModelID:   w.ID.String(),
+		CreatedBy: auditActor(ctx),
+		Payload:   payload,
+	})
+}
+
+// auditActor resolves the acting principal's subject for audit attribution.
+func auditActor(ctx context.Context) string {
+	if p, ok := auth.PrincipalFromContext(ctx); ok {
+		return p.Subject
+	}
+	return ""
 }
 
 // Delete removes a widget.

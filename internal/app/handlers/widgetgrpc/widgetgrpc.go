@@ -1,7 +1,8 @@
 // Package widgetgrpc is the gRPC transport for the widget module. Like the REST
 // handler it is a thin adapter over widget.Core: it maps protobuf messages to
 // the domain and returns *errs.Error values, which the server's interceptor
-// converts into gRPC statuses.
+// converts into gRPC statuses. Auditing is handled by the domain (widget.Core
+// publishes audit events), so the transport needs no audit code.
 package widgetgrpc
 
 import (
