@@ -16,6 +16,10 @@ GOFUMPT     ?= mvdan.cc/gofumpt@latest
 GORELEASE   ?= golang.org/x/exp/cmd/gorelease@latest
 SWAG        ?= github.com/swaggo/swag/v2/cmd/swag@latest
 OASDIFF     ?= github.com/oasdiff/oasdiff@latest
+TPARSE      ?= github.com/mfridman/tparse@latest
+
+# Coverage profile written by `make cover` / `make cover-integration`.
+COVERPROFILE ?= coverage.out
 
 # OpenAPI spec (REST contract) generated from swag annotations.
 SPEC        := docs/swagger.json
@@ -65,12 +69,28 @@ clean: ## Remove build artifacts
 # Test
 # ---------------------------------------------------------------------------
 .PHONY: test
-test: ## Run unit tests (short)
-	$(GO) test -race -short ./...
+test: ## Run unit tests (short, race) with per-package coverage
+	$(GO) test -race -short -cover ./...
+
+.PHONY: test-json
+test-json: ## Unit tests with a pretty pass/fail + coverage summary (tparse)
+	@bash -o pipefail -c '$(GO) test -short -race -cover ./... -json | $(GO) run $(TPARSE) -all'
+
+.PHONY: cover
+cover: ## Write a unit-test coverage profile, print the total, and open coverage.html
+	$(GO) test -short -covermode=atomic -coverprofile=$(COVERPROFILE) ./...
+	@$(GO) tool cover -func=$(COVERPROFILE) | tail -n1
+	@$(GO) tool cover -html=$(COVERPROFILE) -o coverage.html && echo ">> wrote coverage.html"
 
 .PHONY: test-integration
 test-integration: ## Run integration tests (requires docker)
 	$(GO) test -race -count=1 ./internal/tests/...
+
+.PHONY: cover-integration
+cover-integration: ## Integration coverage (docker): credits coverage to every package the tests exercise
+	$(GO) test -count=1 -coverpkg=./... -covermode=atomic -coverprofile=$(COVERPROFILE) ./internal/tests/...
+	@$(GO) tool cover -func=$(COVERPROFILE) | tail -n1
+	@$(GO) tool cover -html=$(COVERPROFILE) -o coverage.html && echo ">> wrote coverage.html"
 
 # ---------------------------------------------------------------------------
 # Local infrastructure (Postgres for `make run` / `make migrate`)
@@ -140,7 +160,8 @@ tools: proto-tools ## Install all dev tools (lint, fmt, proto, release/contract 
 	$(GO) install $(GORELEASE)
 	$(GO) install $(SWAG)
 	$(GO) install $(OASDIFF)
-	@echo "installed: golangci-lint, gofumpt, gorelease, swag, oasdiff (+ proto tools)"
+	$(GO) install $(TPARSE)
+	@echo "installed: golangci-lint, gofumpt, gorelease, swag, oasdiff, tparse (+ proto tools)"
 
 # ---------------------------------------------------------------------------
 # Release & contract tracking
