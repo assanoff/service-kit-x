@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/assanoff/servicekit/errs"
+	"github.com/assanoff/servicekit/translation"
 	"github.com/assanoff/servicekit/web/rest"
 	"github.com/assanoff/servicekit/web/router"
 
@@ -25,14 +26,15 @@ type Counter interface {
 
 // Handler exposes widget endpoints.
 type Handler struct {
-	core     *widgetcore.Core
-	importer *widgetimport.Importer
-	counter  Counter
+	core       *widgetcore.Core
+	importer   *widgetimport.Importer
+	counter    Counter
+	translator *translation.Translator
 }
 
 // New builds a Handler.
-func New(core *widgetcore.Core, importer *widgetimport.Importer, counter Counter) *Handler {
-	return &Handler{core: core, importer: importer, counter: counter}
+func New(core *widgetcore.Core, importer *widgetimport.Importer, counter Counter, translator *translation.Translator) *Handler {
+	return &Handler{core: core, importer: importer, counter: counter, translator: translator}
 }
 
 // Routes registers the widget endpoints on r. Reads are public; writes are
@@ -51,6 +53,7 @@ func (h *Handler) Routes(r *router.Router, authMW ...router.Middleware) {
 	w.HandleApp("POST /widgets/import", h.importBatch)
 	w.HandleApp("PUT /widgets/{id}", h.update)
 	w.HandleApp("DELETE /widgets/{id}", h.delete)
+	w.HandleApp("POST /widgets/{id}/translations", h.saveTranslation)
 }
 
 // importBatch enqueues a batch of widgets for asynchronous bulk insertion by the
@@ -118,7 +121,9 @@ func (h *Handler) query(ctx context.Context, _ *http.Request) rest.Encoder {
 	if err != nil {
 		return errs.From(err)
 	}
-	return rest.JSON(toResponses(ws))
+	// Returned directly (not wrapped in rest.JSON) so the translationrest
+	// middleware can reach the items and translate them into the request language.
+	return toResponseList(ws)
 }
 
 // count returns the cached total widget count. The value is refreshed in the
@@ -152,7 +157,8 @@ func (h *Handler) queryByID(ctx context.Context, r *http.Request) rest.Encoder {
 	if err != nil {
 		return errs.From(err)
 	}
-	return rest.JSON(toResponse(w))
+	// Returned directly so the translationrest middleware can translate it.
+	return toResponse(w)
 }
 
 // update applies a partial update to a widget.
@@ -203,4 +209,40 @@ func (h *Handler) delete(ctx context.Context, r *http.Request) rest.Encoder {
 		return errs.From(err)
 	}
 	return nil // 204 No Content
+}
+
+// saveTranslation stores a translation of a widget's content for one language.
+// The Response DTO carries the translate tags, so saving is one Save call; the
+// translationrest middleware later applies it to read responses automatically.
+//
+//	@Summary	Save a widget translation
+//	@Tags		widgets
+//	@Accept		json
+//	@Produce	json
+//	@Param		id		path	string				true	"widget id"
+//	@Param		request	body	TranslateWidgetReq	true	"translation to save"
+//	@Success	200	{object}	Response
+//	@Failure	400	{string}	string	"invalid argument"
+//	@Router		/widgets/{id}/translations [post]
+func (h *Handler) saveTranslation(ctx context.Context, r *http.Request) rest.Encoder {
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		return errs.Newf(errs.InvalidArgument, "invalid id %q", r.PathValue("id"))
+	}
+
+	var req TranslateWidgetReq
+	if err := rest.Decode(r, &req); err != nil {
+		return errs.From(err)
+	}
+
+	lang := translation.Language{Code: req.Language}
+	if err := h.translator.ValidateLanguage(lang); err != nil {
+		return errs.Newf(errs.InvalidArgument, "unsupported language %q", req.Language)
+	}
+
+	tr := &Response{ID: id.String(), Name: req.Name, Description: req.Description}
+	if err := h.translator.Save(ctx, lang, tr); err != nil {
+		return errs.From(err)
+	}
+	return tr
 }

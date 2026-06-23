@@ -14,6 +14,7 @@ import (
 	"github.com/assanoff/servicekit/httplog"
 	"github.com/assanoff/servicekit/i18n"
 	"github.com/assanoff/servicekit/metrics"
+	"github.com/assanoff/servicekit/translation/translationrest"
 	"github.com/assanoff/servicekit/web/mid"
 	"github.com/assanoff/servicekit/web/rest"
 	"github.com/assanoff/servicekit/web/router"
@@ -35,11 +36,19 @@ func buildRouter(ctx context.Context, d *deps.Deps, m *metrics.Metrics, debug *d
 	tracer := d.Tracer(ctx)
 	translator := d.Translator(ctx)
 
-	// localizeErrors (outermost app middleware) localizes any *errs.Error response.
+	// App middleware applied to every typed handler (outermost first):
+	//   - localizeErrors localizes any *errs.Error response (i18n / static strings).
+	//   - translationrest.Middleware translates per-record content: it resolves the
+	//     request language and, when the handler returns a translation.Translatable
+	//     (or TranslatableList), applies the stored translation in place — so widget
+	//     read handlers stay translation-agnostic.
 	// Audit recording is NOT a transport concern here — the widget domain emits
 	// audit events on the eventbus (see core/widget), which covers REST, gRPC and
 	// background paths uniformly.
-	r := router.New(localizeErrors(translator))
+	r := router.New(
+		localizeErrors(translator),
+		translationrest.Middleware(log, d.Translation(ctx)),
+	)
 
 	// Global middleware — safe for every route including debug. Access logging
 	// via the vendored httplog (tagged logger=access) also recovers panics, so

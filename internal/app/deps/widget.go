@@ -68,7 +68,7 @@ var initWidgetCount = func(c *Deps) (dim.CleanupFunc, error) {
 // background-import endpoint and the cached-count endpoint.
 var initWidgetHandler = func(c *Deps) (dim.CleanupFunc, error) {
 	c.WidgetHandler = dim.OnceWithName("WidgetHandler", func(ctx context.Context) (*widgetapi.Handler, error) {
-		return widgetapi.New(c.WidgetCore(ctx), c.WidgetImport(ctx), c.WidgetCount(ctx)), nil
+		return widgetapi.New(c.WidgetCore(ctx), c.WidgetImport(ctx), c.WidgetCount(ctx), c.Translation(ctx)), nil
 	})
 	return nil, nil
 }

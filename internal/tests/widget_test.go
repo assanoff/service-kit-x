@@ -126,6 +126,7 @@ func startPostgres(ctx context.Context, t *testing.T) config.ServerOpts {
 		DisableTLS:   pg.Config.DisableTLS,
 	}
 	cfg.HTTP.RequestTimeout = 10 * time.Second
+	cfg.Translation = config.Translation{DefaultLang: "ru", Supported: "ru,kk"}
 	return cfg
 }
 

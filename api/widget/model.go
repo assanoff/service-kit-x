@@ -1,7 +1,10 @@
 package widget
 
 import (
+	"encoding/json"
 	"time"
+
+	"github.com/assanoff/servicekit/translation"
 
 	widgetcore "github.com/assanoff/service-kit-x/core/widget"
 )
@@ -17,6 +20,13 @@ type CreateWidgetReq struct {
 type UpdateWidgetReq struct {
 	Name        *string `json:"name" validate:"omitempty,max=100"`
 	Description *string `json:"description" validate:"omitempty,max=500"`
+}
+
+// TranslateWidgetReq saves a translation of a widget's content into one language.
+type TranslateWidgetReq struct {
+	Language    string `json:"language" validate:"required,max=10"`
+	Name        string `json:"name" validate:"required,max=100"`
+	Description string `json:"description" validate:"max=500"`
 }
 
 // ImportWidgetsReq is a batch enqueued for asynchronous bulk import. Name is an
@@ -37,17 +47,52 @@ type CountResponse struct {
 	Count int `json:"count"`
 }
 
-// Response is the REST representation of a widget.
+// Response is the REST representation of a widget. The translate tags mark the
+// fields the translationrest middleware translates into the request language;
+// Response is both a rest.Encoder and a translation.Translatable, so the
+// middleware can reach and translate it without per-handler code.
 type Response struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
+	ID          string    `json:"id" translate:"primary"`
+	Name        string    `json:"name" translate:"name"`
+	Description string    `json:"description" translate:"description"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-func toResponse(w widgetcore.Widget) Response {
-	return Response{
+// GetTranslationKey implements translation.Translatable. The model name matches
+// the widget audit model type so a widget is keyed consistently across features.
+func (r *Response) GetTranslationKey() (modelName, keyID string) {
+	return widgetcore.AuditModelType, r.ID
+}
+
+// Encode implements rest.Encoder.
+func (r *Response) Encode() ([]byte, string, error) {
+	b, err := json.Marshal(r)
+	return b, "application/json", err
+}
+
+// ResponseList is a collection of widget responses. It implements
+// translation.TranslatableList so the middleware translates every item in one
+// batch query, and rest.Encoder so it can be returned directly from a handler.
+type ResponseList []*Response
+
+// Translatables implements translation.TranslatableList.
+func (l ResponseList) Translatables() []translation.Translatable {
+	out := make([]translation.Translatable, len(l))
+	for i, r := range l {
+		out[i] = r
+	}
+	return out
+}
+
+// Encode implements rest.Encoder.
+func (l ResponseList) Encode() ([]byte, string, error) {
+	b, err := json.Marshal(l)
+	return b, "application/json", err
+}
+
+func toResponse(w widgetcore.Widget) *Response {
+	return &Response{
 		ID:          w.ID.String(),
 		Name:        w.Name,
 		Description: w.Description,
@@ -56,8 +101,8 @@ func toResponse(w widgetcore.Widget) Response {
 	}
 }
 
-func toResponses(ws []widgetcore.Widget) []Response {
-	out := make([]Response, len(ws))
+func toResponseList(ws []widgetcore.Widget) ResponseList {
+	out := make(ResponseList, len(ws))
 	for i, w := range ws {
 		out[i] = toResponse(w)
 	}

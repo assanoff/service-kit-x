@@ -20,6 +20,7 @@ import (
 	"github.com/assanoff/servicekit/outbox"
 	"github.com/assanoff/servicekit/poller"
 	"github.com/assanoff/servicekit/queue"
+	"github.com/assanoff/servicekit/translation"
 
 	widgetapi "github.com/assanoff/service-kit-x/api/widget"
 	"github.com/assanoff/service-kit-x/core/widget"
@@ -33,16 +34,17 @@ type Deps struct {
 	Opts   config.ServerOpts
 	Logger *logger.Logger
 
-	Tracer     dim.Provider[trace.Tracer]
-	DB         dim.Provider[*sqlx.DB]
-	Queue      dim.Provider[*queue.PG]
-	BrokerConn dim.Provider[*rabbitmq.Conn]
-	Publisher  dim.Provider[broker.Publisher]
-	Outbox     dim.Provider[outbox.Store]
-	Translator dim.Provider[*i18n.Translator]
-	Verifier   dim.Provider[auth.Verifier]
-	Bus        dim.Provider[*eventbus.Bus]
-	AuditLog   dim.Provider[*auditlog.Core]
+	Tracer      dim.Provider[trace.Tracer]
+	DB          dim.Provider[*sqlx.DB]
+	Queue       dim.Provider[*queue.PG]
+	BrokerConn  dim.Provider[*rabbitmq.Conn]
+	Publisher   dim.Provider[broker.Publisher]
+	Outbox      dim.Provider[outbox.Store]
+	Translator  dim.Provider[*i18n.Translator]
+	Translation dim.Provider[*translation.Translator]
+	Verifier    dim.Provider[auth.Verifier]
+	Bus         dim.Provider[*eventbus.Bus]
+	AuditLog    dim.Provider[*auditlog.Core]
 
 	WidgetCore    dim.Provider[*widget.Core]
 	WidgetImport  dim.Provider[*widgetimport.Importer]
@@ -59,6 +61,7 @@ var Initializers = []func(*Deps) (dim.CleanupFunc, error){
 	initQueue,
 	initBroker,
 	initTranslator,
+	initTranslation,
 	initAuth,
 	initBus,
 	initAuditLog,

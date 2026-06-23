@@ -77,6 +77,27 @@
                 },
                 "type": "object"
             },
+            "widget.TranslateWidgetReq": {
+                "properties": {
+                    "description": {
+                        "maxLength": 500,
+                        "type": "string"
+                    },
+                    "language": {
+                        "maxLength": 10,
+                        "type": "string"
+                    },
+                    "name": {
+                        "maxLength": 100,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "language",
+                    "name"
+                ],
+                "type": "object"
+            },
             "widget.UpdateWidgetReq": {
                 "properties": {
                     "description": {
@@ -380,6 +401,67 @@
                     }
                 },
                 "summary": "Update a widget",
+                "tags": [
+                    "widgets"
+                ]
+            }
+        },
+        "/widgets/{id}/translations": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "widget id",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "oneOf": [
+                                    {
+                                        "type": "object"
+                                    },
+                                    {
+                                        "$ref": "#/components/schemas/widget.TranslateWidgetReq",
+                                        "summary": "request",
+                                        "description": "translation to save"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "description": "translation to save",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/widget.Response"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "invalid argument"
+                    }
+                },
+                "summary": "Save a widget translation",
                 "tags": [
                     "widgets"
                 ]

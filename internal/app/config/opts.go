@@ -12,16 +12,17 @@ type ServerOpts struct {
 	Env      string `long:"app-env"      env:"APP_ENV"      default:"development"         description:"runtime environment"`
 	LogLevel string `long:"log-level"    env:"LOG_LEVEL"    default:"info"                description:"log level: debug|info|warn|error"`
 
-	HTTP    HTTP    `group:"http" namespace:"http" env-namespace:"HTTP"`
-	GRPC    GRPC    `group:"grpc" namespace:"grpc" env-namespace:"GRPC"`
-	Debug   Debug   `group:"debug" namespace:"debug" env-namespace:"DEBUG"`
-	DB      DB      `group:"postgres" namespace:"db" env-namespace:"DB"`
-	OTEL    OTEL    `group:"otel" namespace:"otel" env-namespace:"OTEL"`
-	Worker  Worker  `group:"worker" namespace:"worker" env-namespace:"WORKER"`
-	Broker  Broker  `group:"broker" namespace:"broker" env-namespace:"BROKER"`
-	Auth    Auth    `group:"auth" namespace:"auth" env-namespace:"AUTH"`
-	Webhook Webhook `group:"webhook" namespace:"webhook" env-namespace:"WEBHOOK"`
-	Audit   Audit   `group:"audit" namespace:"audit" env-namespace:"AUDIT"`
+	HTTP        HTTP        `group:"http" namespace:"http" env-namespace:"HTTP"`
+	GRPC        GRPC        `group:"grpc" namespace:"grpc" env-namespace:"GRPC"`
+	Debug       Debug       `group:"debug" namespace:"debug" env-namespace:"DEBUG"`
+	DB          DB          `group:"postgres" namespace:"db" env-namespace:"DB"`
+	OTEL        OTEL        `group:"otel" namespace:"otel" env-namespace:"OTEL"`
+	Worker      Worker      `group:"worker" namespace:"worker" env-namespace:"WORKER"`
+	Broker      Broker      `group:"broker" namespace:"broker" env-namespace:"BROKER"`
+	Auth        Auth        `group:"auth" namespace:"auth" env-namespace:"AUTH"`
+	Webhook     Webhook     `group:"webhook" namespace:"webhook" env-namespace:"WEBHOOK"`
+	Audit       Audit       `group:"audit" namespace:"audit" env-namespace:"AUDIT"`
+	Translation Translation `group:"translation" namespace:"translation" env-namespace:"TRANSLATION"`
 }
 
 // HTTP holds REST server settings. REST and gRPC run together or independently;
@@ -128,6 +129,15 @@ type Audit struct {
 	MaxVersions      int `long:"max-versions"       env:"MAX_VERSIONS"       default:"0"   description:"cap total kept versions (0 = unlimited)"`
 	CompactThreshold int `long:"compact-threshold"  env:"COMPACT_THRESHOLD"  default:"100" description:"only compact models with more than this many versions"`
 	CompactLimit     int `long:"compact-limit"      env:"COMPACT_LIMIT"      default:"100" description:"max models compacted per batch call"`
+}
+
+// Translation holds settings for the per-record content-translation demo.
+// Canonical widget content is authored in DefaultLang; the translationrest
+// middleware translates responses into the request language (X-Language /
+// Accept-Language) when a translation exists.
+type Translation struct {
+	DefaultLang string `long:"default-lang" env:"DEFAULT_LANG" default:"ru"    description:"default (canonical) language code"`
+	Supported   string `long:"supported"    env:"SUPPORTED"    default:"ru,kk" description:"comma-separated supported language codes"`
 }
 
 // OTEL holds tracing settings.
