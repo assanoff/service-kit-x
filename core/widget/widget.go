@@ -18,31 +18,6 @@ import (
 	"github.com/assanoff/servicekit/sqldb"
 )
 
-// EventWidgetCreated is the CloudEvents type published when a widget is created.
-const EventWidgetCreated = "widget.created"
-
-// Widget is the domain entity.
-type Widget struct {
-	ID          uuid.UUID
-	Name        string
-	Description string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-}
-
-// NewWidget is the data required to create a Widget.
-type NewWidget struct {
-	Name        string
-	Description string
-}
-
-// UpdateWidget is the data allowed when updating a Widget. Nil fields are left
-// unchanged.
-type UpdateWidget struct {
-	Name        *string
-	Description *string
-}
-
 // Store is the persistence contract for widgets. The Core depends on this
 // interface; concrete implementations (e.g. widgetdb) live elsewhere. WithTx
 // yields a sibling bound to a transaction so a write can commit atomically with
@@ -134,17 +109,6 @@ func (c *Core) Create(ctx context.Context, nw NewWidget) (Widget, error) {
 		return Widget{}, errs.New(errs.Internal, err)
 	}
 	return w, nil
-}
-
-// Created is the domain event emitted when a widget is created. It is a
-// plain payload type: the domain publishes it through outbox.Publisher and the
-// Registry (wired at startup) maps it to its transport route. Register it once
-// with outbox.Register[Created](reg, EventWidgetCreated, topic, ...).
-type Created struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"created_at"`
 }
 
 // QueryByID returns a widget or a NotFound error.

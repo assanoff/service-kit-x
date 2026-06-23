@@ -13,6 +13,13 @@ LDFLAGS     := -X github.com/assanoff/service-kit-x/cmd.version=$(VERSION)
 # Dev tool versions (override to pin).
 GOLANGCI    ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 GOFUMPT     ?= mvdan.cc/gofumpt@latest
+GORELEASE   ?= golang.org/x/exp/cmd/gorelease@latest
+SWAG        ?= github.com/swaggo/swag/v2/cmd/swag@latest
+OASDIFF     ?= github.com/oasdiff/oasdiff@latest
+
+# OpenAPI spec (REST contract) generated from swag annotations.
+SPEC        := docs/swagger.json
+SWAG_FLAGS  := -g main.go -o docs --v3.1 --ot json,yaml --parseDependency --parseInternal
 
 # ---------------------------------------------------------------------------
 # Help
@@ -108,6 +115,18 @@ proto: ## Generate gRPC code from .proto (run proto-tools first)
 breaking: ## Detect breaking changes in the gRPC/proto contract vs $(BUF_BASELINE)
 	buf breaking proto --against '$(AGAINST)'
 
+.PHONY: openapi
+openapi: ## Generate the OpenAPI 3.1 REST spec from swag annotations -> docs/
+	$(GO) run $(SWAG) init $(SWAG_FLAGS)
+
+.PHONY: breaking-rest
+breaking-rest: openapi ## Detect breaking REST changes (oasdiff) vs the spec at the latest tag
+	@cur=$$(git tag --list 'v*' | sort -V | tail -1); \
+	if [ -z "$$cur" ]; then echo ">> no tag yet — REST baseline unavailable, skipping"; exit 0; fi; \
+	base=$$(mktemp); \
+	if ! git show $$cur:$(SPEC) > $$base 2>/dev/null; then echo ">> no $(SPEC) at $$cur, skipping"; exit 0; fi; \
+	$(GO) run $(OASDIFF) breaking $$base $(SPEC)
+
 .PHONY: proto-tools
 proto-tools: ## Install protobuf codegen tools (buf, protoc-gen-go, protoc-gen-go-grpc)
 	$(GO) install github.com/bufbuild/buf/cmd/buf@latest
@@ -115,19 +134,49 @@ proto-tools: ## Install protobuf codegen tools (buf, protoc-gen-go, protoc-gen-g
 	$(GO) install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 .PHONY: tools
-tools: proto-tools ## Install all dev tools (lint, fmt, + proto)
+tools: proto-tools ## Install all dev tools (lint, fmt, proto, release/contract diff, swag)
 	$(GO) install $(GOLANGCI)
 	$(GO) install $(GOFUMPT)
-	@echo "installed: golangci-lint, gofumpt (+ proto tools)"
+	$(GO) install $(GORELEASE)
+	$(GO) install $(SWAG)
+	$(GO) install $(OASDIFF)
+	@echo "installed: golangci-lint, gofumpt, gorelease, swag, oasdiff (+ proto tools)"
 
 # ---------------------------------------------------------------------------
-# Release (application, not a Go library)
+# Release & contract tracking
 #
-# Unlike the SDK, this is an app: there is no public Go API to diff, so no
-# gorelease. A release is a version tag — CI (or `make build`) then produces the
-# versioned binary/image. check-version enforces one semver step above the
-# latest tag.
+# The contract this service exposes to others is threefold, each with its own
+# diff gate vs the latest tag:
+#   - Go API  : gorelease — only api/, core/, gen/ are public (the rest is under
+#               internal/), so the module-wide diff is scoped to the contract.
+#   - gRPC    : buf breaking            (make breaking)
+#   - REST    : oasdiff on the OpenAPI  (make breaking-rest)
+#
+# release-suggest aggregates all three; release-auto tags gorelease's suggestion
+# but refuses when a wire gate (gRPC/REST) reports a breaking change (those
+# require a deliberate major). check-version enforces one semver step.
 # ---------------------------------------------------------------------------
+.PHONY: gorelease
+gorelease: ## Go-API diff of the public packages (api/, core/, gen/) vs the latest tag
+	$(GO) run $(GORELEASE)
+
+.PHONY: release-suggest
+release-suggest: openapi ## Suggest the next version from the Go + gRPC + REST contract diffs
+	@echo "── Go API (gorelease) ──";   $(GO) run $(GORELEASE) || true
+	@echo "── gRPC (buf breaking) ──";  $(MAKE) -s breaking      && echo "  gRPC: compatible" || echo "  gRPC: BREAKING -> major"
+	@echo "── REST (oasdiff) ──";       $(MAKE) -s breaking-rest && echo "  REST: compatible" || echo "  REST: BREAKING -> major"
+	@echo "Pick gorelease's suggestion, OR a major bump if any wire gate is BREAKING."
+
+.PHONY: release-auto
+release-auto: check-clean openapi ## Tag & push gorelease's suggested version (refuses on a wire-contract break)
+	@$(MAKE) -s breaking      || { echo "gRPC contract broke — bump a MAJOR: make release V=vX.0.0"; exit 1; }
+	@$(MAKE) -s breaking-rest || { echo "REST contract broke — bump a MAJOR: make release V=vX.0.0"; exit 1; }
+	@v=$$($(GO) run $(GORELEASE) 2>/dev/null | sed -n 's/^Suggested version: //p'); \
+	if [ -z "$$v" ]; then \
+		echo "gorelease gave no suggestion (incompatible Go API or first release) — use make release V=..."; exit 1; \
+	fi; \
+	echo ">> gorelease suggests $$v"; $(MAKE) release V=$$v
+
 .PHONY: check-clean
 check-clean:
 	@test -z "$$(git status --porcelain)" || \

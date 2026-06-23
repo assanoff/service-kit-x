@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/assanoff/service-kit-x/app/config"
+	"github.com/assanoff/service-kit-x/internal/app/config"
 	"github.com/assanoff/servicekit/logger"
 )
 

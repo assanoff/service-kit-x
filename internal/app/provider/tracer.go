@@ -6,7 +6,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
-	"github.com/assanoff/service-kit-x/app/config"
+	"github.com/assanoff/service-kit-x/internal/app/config"
 	"github.com/assanoff/servicekit/dim"
 	skotel "github.com/assanoff/servicekit/otel"
 )

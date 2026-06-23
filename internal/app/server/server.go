@@ -10,11 +10,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/assanoff/service-kit-x/app/config"
-	"github.com/assanoff/service-kit-x/app/deps"
 	"github.com/assanoff/service-kit-x/core/widgetaudit"
 	"github.com/assanoff/service-kit-x/core/widgetimport"
 	widgetv1 "github.com/assanoff/service-kit-x/gen/widget/v1"
+	"github.com/assanoff/service-kit-x/internal/app/config"
+	"github.com/assanoff/service-kit-x/internal/app/deps"
 	"github.com/assanoff/servicekit/broker/rabbitmq"
 	"github.com/assanoff/servicekit/debugsrv"
 	"github.com/assanoff/servicekit/grpcserver"

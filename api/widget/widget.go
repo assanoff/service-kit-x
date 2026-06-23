@@ -1,7 +1,7 @@
-// Package widgetapi is the REST transport layer for the widget module. Handlers
+// Package widget is the REST transport layer for the widget module. Handlers
 // are servicekit rest.HandlerFunc values: they decode/validate input, call the
 // Core, and return an Encoder (a DTO or an *errs.Error).
-package widgetapi
+package widget
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/assanoff/service-kit-x/core/widget"
+	widgetcore "github.com/assanoff/service-kit-x/core/widget"
 	"github.com/assanoff/service-kit-x/core/widgetimport"
 	"github.com/assanoff/servicekit/errs"
 	"github.com/assanoff/servicekit/web/rest"
@@ -18,12 +18,12 @@ import (
 
 // Handler exposes widget endpoints.
 type Handler struct {
-	core     *widget.Core
+	core     *widgetcore.Core
 	importer *widgetimport.Importer
 }
 
 // New builds a Handler.
-func New(core *widget.Core, importer *widgetimport.Importer) *Handler {
+func New(core *widgetcore.Core, importer *widgetimport.Importer) *Handler {
 	return &Handler{core: core, importer: importer}
 }
 
@@ -47,37 +47,63 @@ func (h *Handler) Routes(r *router.Router, authMW ...router.Middleware) {
 // importBatch enqueues a batch of widgets for asynchronous bulk insertion by the
 // background worker. It returns 202 Accepted immediately; the widgets appear
 // once the worker drains the queue.
+//
+//	@Summary	Bulk-import widgets (async)
+//	@Tags		widgets
+//	@Accept		json
+//	@Produce	json
+//	@Param		request	body		ImportWidgetsReq	true	"batch to import"
+//	@Success	202		{object}	ImportResponse
+//	@Failure	400		{string}	string	"invalid argument"
+//	@Router		/widgets/import [post]
 func (h *Handler) importBatch(ctx context.Context, r *http.Request) rest.Encoder {
-	var req importWidgetsReq
+	var req ImportWidgetsReq
 	if err := rest.Decode(r, &req); err != nil {
 		return errs.From(err)
 	}
 
-	news := make([]widget.NewWidget, len(req.Widgets))
+	news := make([]widgetcore.NewWidget, len(req.Widgets))
 	for i, w := range req.Widgets {
-		news[i] = widget.NewWidget{Name: w.Name, Description: w.Description}
+		news[i] = widgetcore.NewWidget{Name: w.Name, Description: w.Description}
 	}
 
 	scheduled, err := h.importer.Schedule(ctx, req.Name, news)
 	if err != nil {
 		return errs.From(err)
 	}
-	return rest.JSONStatus(importResponse{Scheduled: scheduled, Count: len(news)}, http.StatusAccepted)
+	return rest.JSONStatus(ImportResponse{Scheduled: scheduled, Count: len(news)}, http.StatusAccepted)
 }
 
+// create creates a single widget.
+//
+//	@Summary	Create a widget
+//	@Tags		widgets
+//	@Accept		json
+//	@Produce	json
+//	@Param		request	body		CreateWidgetReq	true	"widget to create"
+//	@Success	201		{object}	WidgetResponse
+//	@Failure	400		{string}	string	"invalid argument"
+//	@Router		/widgets [post]
 func (h *Handler) create(ctx context.Context, r *http.Request) rest.Encoder {
-	var req createWidgetReq
+	var req CreateWidgetReq
 	if err := rest.Decode(r, &req); err != nil {
 		return errs.From(err)
 	}
 
-	w, err := h.core.Create(ctx, widget.NewWidget{Name: req.Name, Description: req.Description})
+	w, err := h.core.Create(ctx, widgetcore.NewWidget{Name: req.Name, Description: req.Description})
 	if err != nil {
 		return errs.From(err)
 	}
 	return rest.JSONStatus(toResponse(w), http.StatusCreated)
 }
 
+// query lists all widgets.
+//
+//	@Summary	List widgets
+//	@Tags		widgets
+//	@Produce	json
+//	@Success	200	{array}	WidgetResponse
+//	@Router		/widgets [get]
 func (h *Handler) query(ctx context.Context, _ *http.Request) rest.Encoder {
 	ws, err := h.core.Query(ctx)
 	if err != nil {
@@ -86,6 +112,15 @@ func (h *Handler) query(ctx context.Context, _ *http.Request) rest.Encoder {
 	return rest.JSON(toResponses(ws))
 }
 
+// queryByID returns one widget by id.
+//
+//	@Summary	Get a widget by id
+//	@Tags		widgets
+//	@Produce	json
+//	@Param		id	path		string	true	"widget id"
+//	@Success	200	{object}	WidgetResponse
+//	@Failure	404	{string}	string	"not found"
+//	@Router		/widgets/{id} [get]
 func (h *Handler) queryByID(ctx context.Context, r *http.Request) rest.Encoder {
 	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
@@ -99,24 +134,44 @@ func (h *Handler) queryByID(ctx context.Context, r *http.Request) rest.Encoder {
 	return rest.JSON(toResponse(w))
 }
 
+// update applies a partial update to a widget.
+//
+//	@Summary	Update a widget
+//	@Tags		widgets
+//	@Accept		json
+//	@Produce	json
+//	@Param		id		path		string			true	"widget id"
+//	@Param		request	body		UpdateWidgetReq	true	"fields to update"
+//	@Success	200		{object}	WidgetResponse
+//	@Failure	400		{string}	string	"invalid argument"
+//	@Failure	404		{string}	string	"not found"
+//	@Router		/widgets/{id} [put]
 func (h *Handler) update(ctx context.Context, r *http.Request) rest.Encoder {
 	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		return errs.Newf(errs.InvalidArgument, "invalid id %q", r.PathValue("id"))
 	}
 
-	var req updateWidgetReq
+	var req UpdateWidgetReq
 	if err := rest.Decode(r, &req); err != nil {
 		return errs.From(err)
 	}
 
-	w, err := h.core.Update(ctx, id, widget.UpdateWidget{Name: req.Name, Description: req.Description})
+	w, err := h.core.Update(ctx, id, widgetcore.UpdateWidget{Name: req.Name, Description: req.Description})
 	if err != nil {
 		return errs.From(err)
 	}
 	return rest.JSON(toResponse(w))
 }
 
+// delete removes a widget.
+//
+//	@Summary	Delete a widget
+//	@Tags		widgets
+//	@Param		id	path	string	true	"widget id"
+//	@Success	204	"no content"
+//	@Failure	404	{string}	string	"not found"
+//	@Router		/widgets/{id} [delete]
 func (h *Handler) delete(ctx context.Context, r *http.Request) rest.Encoder {
 	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {

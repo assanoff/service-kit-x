@@ -1,34 +1,34 @@
-package widgetapi
+package widget
 
 import (
 	"time"
 
-	"github.com/assanoff/service-kit-x/core/widget"
+	widgetcore "github.com/assanoff/service-kit-x/core/widget"
 )
 
-type createWidgetReq struct {
+type CreateWidgetReq struct {
 	Name        string `json:"name" validate:"required,max=100"`
 	Description string `json:"description" validate:"max=500"`
 }
 
-type updateWidgetReq struct {
+type UpdateWidgetReq struct {
 	Name        *string `json:"name" validate:"omitempty,max=100"`
 	Description *string `json:"description" validate:"omitempty,max=500"`
 }
 
-// importWidgetsReq is a batch enqueued for asynchronous bulk import. Name is an
+// ImportWidgetsReq is a batch enqueued for asynchronous bulk import. Name is an
 // optional dedup key: re-posting the same name is a no-op.
-type importWidgetsReq struct {
+type ImportWidgetsReq struct {
 	Name    string            `json:"name" validate:"max=200"`
-	Widgets []createWidgetReq `json:"widgets" validate:"required,min=1,max=1000,dive"`
+	Widgets []CreateWidgetReq `json:"widgets" validate:"required,min=1,max=1000,dive"`
 }
 
-type importResponse struct {
+type ImportResponse struct {
 	Scheduled bool `json:"scheduled"`
 	Count     int  `json:"count"`
 }
 
-type widgetResponse struct {
+type WidgetResponse struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
@@ -36,8 +36,8 @@ type widgetResponse struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-func toResponse(w widget.Widget) widgetResponse {
-	return widgetResponse{
+func toResponse(w widgetcore.Widget) WidgetResponse {
+	return WidgetResponse{
 		ID:          w.ID.String(),
 		Name:        w.Name,
 		Description: w.Description,
@@ -46,8 +46,8 @@ func toResponse(w widget.Widget) widgetResponse {
 	}
 }
 
-func toResponses(ws []widget.Widget) []widgetResponse {
-	out := make([]widgetResponse, len(ws))
+func toResponses(ws []widgetcore.Widget) []WidgetResponse {
+	out := make([]WidgetResponse, len(ws))
 	for i, w := range ws {
 		out[i] = toResponse(w)
 	}

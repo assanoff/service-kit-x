@@ -13,7 +13,7 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
-	"github.com/assanoff/service-kit-x/app/server"
+	"github.com/assanoff/service-kit-x/internal/app/server"
 	"github.com/assanoff/servicekit/logger"
 )
 

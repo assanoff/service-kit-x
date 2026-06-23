@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/assanoff/service-kit-x/app/deps"
+	"github.com/assanoff/service-kit-x/internal/app/deps"
 	"github.com/assanoff/servicekit/auth"
 	"github.com/assanoff/servicekit/debugsrv"
 	"github.com/assanoff/servicekit/errs"

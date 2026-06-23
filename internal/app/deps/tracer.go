@@ -1,7 +1,7 @@
 package deps
 
 import (
-	"github.com/assanoff/service-kit-x/app/provider"
+	"github.com/assanoff/service-kit-x/internal/app/provider"
 	"github.com/assanoff/servicekit/dim"
 )
 

@@ -3,7 +3,7 @@ package deps
 import (
 	"context"
 
-	"github.com/assanoff/service-kit-x/app/provider"
+	"github.com/assanoff/service-kit-x/internal/app/provider"
 	"github.com/assanoff/servicekit/dim"
 	"github.com/assanoff/servicekit/queue"
 )

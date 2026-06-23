@@ -3,11 +3,11 @@ package deps
 import (
 	"context"
 
-	"github.com/assanoff/service-kit-x/app/handlers/widgetapi"
-	"github.com/assanoff/service-kit-x/app/handlers/widgetgrpc"
+	widgetapi "github.com/assanoff/service-kit-x/api/widget"
 	"github.com/assanoff/service-kit-x/core/widget"
 	"github.com/assanoff/service-kit-x/core/widget/widgetdb"
 	"github.com/assanoff/service-kit-x/core/widgetimport"
+	"github.com/assanoff/service-kit-x/internal/app/handlers/widgetgrpc"
 	"github.com/assanoff/servicekit/dim"
 	"github.com/assanoff/servicekit/outbox"
 )

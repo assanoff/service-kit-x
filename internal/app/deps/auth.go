@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/assanoff/service-kit-x/app/locale"
+	"github.com/assanoff/service-kit-x/internal/app/locale"
 	"github.com/assanoff/servicekit/auth"
 	"github.com/assanoff/servicekit/dim"
 	"github.com/assanoff/servicekit/i18n"

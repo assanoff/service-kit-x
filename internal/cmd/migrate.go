@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/assanoff/service-kit-x/app/config"
-	"github.com/assanoff/service-kit-x/migrations"
+	"github.com/assanoff/service-kit-x/internal/app/config"
+	"github.com/assanoff/service-kit-x/internal/migrations"
 	"github.com/assanoff/servicekit/migrate"
 	"github.com/assanoff/servicekit/sqldb"
 )

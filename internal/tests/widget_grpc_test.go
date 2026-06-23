@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
-	"github.com/assanoff/service-kit-x/app/server"
 	widgetv1 "github.com/assanoff/service-kit-x/gen/widget/v1"
+	"github.com/assanoff/service-kit-x/internal/app/server"
 	"github.com/assanoff/servicekit/logger"
 )
 

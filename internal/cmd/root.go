@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/assanoff/service-kit-x/app/config"
+	"github.com/assanoff/service-kit-x/internal/app/config"
 	skconfig "github.com/assanoff/servicekit/config"
 	"github.com/assanoff/servicekit/logger"
 	skotel "github.com/assanoff/servicekit/otel"
