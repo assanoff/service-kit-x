@@ -63,11 +63,6 @@ build: ## Build the versioned binary into bin/
 run: ## Run the server (go run . serve)
 	$(GO) run -ldflags "$(LDFLAGS)" . serve
 
-.PHONY: clean
-clean: ## Remove build and coverage artifacts
-	rm -rf bin
-	rm -f $(COVERPROFILE) coverage.html
-
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
