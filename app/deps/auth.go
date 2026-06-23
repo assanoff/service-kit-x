@@ -1,0 +1,47 @@
+package deps
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/assanoff/service-kit-x/app/locale"
+	"github.com/assanoff/servicekit/auth"
+	"github.com/assanoff/servicekit/dim"
+	"github.com/assanoff/servicekit/i18n"
+)
+
+// initTranslator builds the i18n translator from the embedded catalogs. It is
+// always available — error responses are localized by Accept-Language.
+var initTranslator = func(c *Deps) (dim.CleanupFunc, error) {
+	tr, err := locale.New()
+	if err != nil {
+		return nil, fmt.Errorf("init translator: %w", err)
+	}
+	c.Translator = dim.OnceWithName("Translator", func(context.Context) (*i18n.Translator, error) {
+		return tr, nil
+	})
+	return nil, nil
+}
+
+// initAuth builds the JWT verifier when auth is enabled. Disabled => provider
+// stays nil and widget writes are public.
+var initAuth = func(c *Deps) (dim.CleanupFunc, error) {
+	if !c.Opts.Auth.Enabled {
+		return nil, nil
+	}
+	if c.Opts.Auth.JWTSecret == "" {
+		return nil, fmt.Errorf("init auth: auth enabled but jwt-secret is empty")
+	}
+	verifier, err := auth.NewJWTVerifier(auth.JWTConfig{
+		HMACSecret: []byte(c.Opts.Auth.JWTSecret),
+		Issuer:     c.Opts.Auth.Issuer,
+		Audience:   c.Opts.Auth.Audience,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("init auth: %w", err)
+	}
+	c.Verifier = dim.OnceWithName("Verifier", func(context.Context) (auth.Verifier, error) {
+		return verifier, nil
+	})
+	return nil, nil
+}

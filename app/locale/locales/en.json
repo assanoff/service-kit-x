@@ -1,0 +1,4 @@
+{
+  "widget.not_found": "widget {{.id}} not found",
+  "widget.already_exists": "widget {{.name}} already exists"
+}

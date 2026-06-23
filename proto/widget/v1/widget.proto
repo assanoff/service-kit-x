@@ -1,0 +1,70 @@
+edition = "2023";
+
+package widget.v1;
+
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/assanoff/service-kit-x/gen/widget/v1;widgetv1";
+
+// Use Google's Opaque API for Go: monolithic generated code, lazy decoding,
+// fewer allocations (the official performance path that replaces vtprotobuf).
+option features.(pb.go).api_level = API_OPAQUE;
+
+// Keep proto3-like semantics by default: singular fields have no presence.
+// Fields that need presence opt in with [features.field_presence = EXPLICIT].
+option features.field_presence = IMPLICIT;
+
+// Widget mirrors the domain entity over the wire.
+message Widget {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message CreateWidgetRequest {
+  string name = 1;
+  string description = 2;
+}
+message CreateWidgetResponse {
+  Widget widget = 1;
+}
+
+message GetWidgetRequest {
+  string id = 1;
+}
+message GetWidgetResponse {
+  Widget widget = 1;
+}
+
+message ListWidgetsRequest {}
+message ListWidgetsResponse {
+  repeated Widget widgets = 1;
+}
+
+message UpdateWidgetRequest {
+  string id = 1;
+  // Explicit presence so the server can distinguish "unset" from "empty"
+  // (partial update), the editions equivalent of proto3 `optional`.
+  string name = 2 [features.field_presence = EXPLICIT];
+  string description = 3 [features.field_presence = EXPLICIT];
+}
+message UpdateWidgetResponse {
+  Widget widget = 1;
+}
+
+message DeleteWidgetRequest {
+  string id = 1;
+}
+message DeleteWidgetResponse {}
+
+// WidgetService is the gRPC counterpart of the REST widget API.
+service WidgetService {
+  rpc CreateWidget(CreateWidgetRequest) returns (CreateWidgetResponse);
+  rpc GetWidget(GetWidgetRequest) returns (GetWidgetResponse);
+  rpc ListWidgets(ListWidgetsRequest) returns (ListWidgetsResponse);
+  rpc UpdateWidget(UpdateWidgetRequest) returns (UpdateWidgetResponse);
+  rpc DeleteWidget(DeleteWidgetRequest) returns (DeleteWidgetResponse);
+}

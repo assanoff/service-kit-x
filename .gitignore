@@ -1,0 +1,9 @@
+# Build artifacts
+/bin/
+
+# Local environment (committed template: .env.example)
+.env
+
+# Go test/coverage output
+*.out
+coverage.*
