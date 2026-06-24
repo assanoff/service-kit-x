@@ -18,10 +18,20 @@ SWAG        ?= github.com/swaggo/swag/v2/cmd/swag@latest
 OASDIFF     ?= github.com/oasdiff/oasdiff@latest
 TPARSE      ?= github.com/mfridman/tparse@latest
 
-# Coverage profile written by `make cover` / `make cover-integration`;
+# COVERDIR is the gitignored directory all coverage artifacts live in, so they
+# never clutter the repo root: the profile/HTML written by `make cover` /
+# `cover-integration` / `cover-report`, and the raw GOCOVERDIR counter files the
+# instrumented binary flushes (collected from a mounted volume in the external
+# e2e repo). COVER=1 switches `make build` to a coverage-instrumented binary
+# (go build -cover) for that external run.
+COVERDIR     ?= coverdata
+COVERPROFILE ?= $(COVERDIR)/coverage.out
+COVERHTML    := $(COVERDIR)/coverage.html
 # THRESHOLD is the `cover-check` CI gate (measured over the integration suite).
-COVERPROFILE ?= coverage.out
 THRESHOLD    ?= 65
+ifeq ($(COVER),1)
+COVERFLAGS := -cover -covermode=atomic -coverpkg=./...
+endif
 
 # OpenAPI spec (REST contract) generated from swag annotations.
 SPEC        := docs/swagger.json
@@ -55,9 +65,15 @@ lint: ## Run golangci-lint
 	$(LINT) run
 
 .PHONY: build
-build: ## Build the versioned binary into bin/
-	$(GO) build -ldflags "$(LDFLAGS)" -o $(BIN) .
-	@echo "built $(BIN) ($(VERSION))"
+build: ## Build the versioned binary into bin/ (COVER=1 for a coverage-instrumented build)
+	$(GO) build $(COVERFLAGS) -ldflags "$(LDFLAGS)" -o $(BIN) .
+	@echo "built $(BIN) ($(VERSION))$(if $(COVERFLAGS), [coverage-instrumented],)"
+
+.PHONY: build-cover
+build-cover: ## Cross-compile a static linux coverage-instrumented binary (for the external e2e image; override GOOS/GOARCH)
+	CGO_ENABLED=0 GOOS=$(or $(GOOS),linux) GOARCH=$(or $(GOARCH),amd64) \
+		$(GO) build -cover -covermode=atomic -coverpkg=./... -trimpath -ldflags "$(LDFLAGS)" -o $(BIN) .
+	@echo "built instrumented $(BIN) for $(or $(GOOS),linux)/$(or $(GOARCH),amd64)"
 
 .PHONY: run
 run: ## Run the server (go run . serve)
@@ -75,10 +91,11 @@ test-json: ## Unit tests with a pretty pass/fail + coverage summary (tparse)
 	@bash -o pipefail -c '$(GO) test -short -race -cover ./... -json | $(GO) run $(TPARSE) -all'
 
 .PHONY: cover
-cover: ## Write a unit-test coverage profile, print the total, and open coverage.html
+cover: ## Write a unit-test coverage profile, print the total, and render the HTML
+	@mkdir -p $(COVERDIR)
 	$(GO) test -short -covermode=atomic -coverprofile=$(COVERPROFILE) ./...
 	@$(GO) tool cover -func=$(COVERPROFILE) | tail -n1
-	@$(GO) tool cover -html=$(COVERPROFILE) -o coverage.html && echo ">> wrote coverage.html"
+	@$(GO) tool cover -html=$(COVERPROFILE) -o $(COVERHTML) && echo ">> wrote $(COVERHTML)"
 
 .PHONY: test-integration
 test-integration: ## Run integration tests (requires docker)
@@ -86,12 +103,14 @@ test-integration: ## Run integration tests (requires docker)
 
 .PHONY: cover-integration
 cover-integration: ## Integration coverage (docker): credits coverage to every package the tests exercise
+	@mkdir -p $(COVERDIR)
 	$(GO) test -count=1 -coverpkg=./... -covermode=atomic -coverprofile=$(COVERPROFILE) ./internal/tests/...
 	@$(GO) tool cover -func=$(COVERPROFILE) | tail -n1
-	@$(GO) tool cover -html=$(COVERPROFILE) -o coverage.html && echo ">> wrote coverage.html"
+	@$(GO) tool cover -html=$(COVERPROFILE) -o $(COVERHTML) && echo ">> wrote $(COVERHTML)"
 
 .PHONY: cover-check
 cover-check: ## Fail if integration coverage is below THRESHOLD% (CI gate; docker; override THRESHOLD=NN)
+	@mkdir -p $(COVERDIR)
 	$(GO) test -count=1 -coverpkg=./... -covermode=atomic -coverprofile=$(COVERPROFILE) ./internal/tests/...
 	@total=$$($(GO) tool cover -func=$(COVERPROFILE) | awk '/^total:/ {print $$3}' | tr -d '%'); \
 	if awk "BEGIN { exit !($$total + 0 >= $(THRESHOLD)) }"; then \
@@ -99,6 +118,30 @@ cover-check: ## Fail if integration coverage is below THRESHOLD% (CI gate; docke
 	else \
 		echo ">> coverage $$total% < $(THRESHOLD)% — FAIL"; exit 1; \
 	fi
+
+# cover-report turns a directory of raw coverage counter files into a report.
+# The counters come from a coverage-instrumented binary (built with COVER=1 /
+# `make build-cover`) run as a REAL process — typically in the EXTERNAL e2e repo
+# (hurl scenarios + docker assembly), with GOCOVERDIR set to a mounted volume the
+# container flushes on graceful SIGTERM. Copy/mount that volume here as $(COVERDIR)
+# and run this. It must run in THIS repo because go tool cover maps counters back
+# to the module source. This credits main/cmd flag parsing, server bootstrap, the
+# worker supervisor and graceful-shutdown paths — code `go test` never executes.
+# To fold in the in-process unit+integration counters too, emit them into the same
+# dir first: go test -coverpkg=./... ./... -args -test.gocoverdir=$(COVERDIR)
+.PHONY: cover-tests
+cover-tests: ## Emit in-process unit+integration coverage counters into COVERDIR (atomic; needs docker) — for merging with the e2e binary counters
+	@test -n "$(COVERDIR)" || { echo "usage: make cover-tests COVERDIR=path"; exit 1; }
+	@mkdir -p "$(COVERDIR)"
+	$(GO) test -coverpkg=./... -covermode=atomic ./... -args -test.gocoverdir="$(COVERDIR)"
+
+.PHONY: cover-report
+cover-report: ## Report from collected GOCOVERDIR counters (COVERDIR=path, from the e2e run)
+	@test -n "$$(ls -A $(COVERDIR) 2>/dev/null)" || { \
+		echo "no counter files in $(COVERDIR)/ — point COVERDIR at the GOCOVERDIR collected from the e2e run"; exit 1; }
+	$(GO) tool covdata textfmt -i $(COVERDIR) -o $(COVERPROFILE)
+	@$(GO) tool cover -func=$(COVERPROFILE) | tail -n1
+	@$(GO) tool cover -html=$(COVERPROFILE) -o $(COVERHTML) && echo ">> wrote $(COVERHTML)"
 
 # ---------------------------------------------------------------------------
 # Local infrastructure (Postgres for `make run` / `make migrate`)

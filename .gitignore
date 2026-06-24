@@ -7,3 +7,6 @@
 # Go test/coverage output
 *.out
 coverage.*
+
+# Raw coverage counter data (go build -cover / GOCOVERDIR)
+/coverdata/
