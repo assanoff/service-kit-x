@@ -14,6 +14,7 @@ type ServerOpts struct {
 
 	HTTP        HTTP        `group:"http" namespace:"http" env-namespace:"HTTP"`
 	GRPC        GRPC        `group:"grpc" namespace:"grpc" env-namespace:"GRPC"`
+	Gateway     Gateway     `group:"gateway" namespace:"gateway" env-namespace:"GATEWAY"`
 	Debug       Debug       `group:"debug" namespace:"debug" env-namespace:"DEBUG"`
 	DB          DB          `group:"postgres" namespace:"db" env-namespace:"DB"`
 	OTEL        OTEL        `group:"otel" namespace:"otel" env-namespace:"OTEL"`
@@ -25,35 +26,40 @@ type ServerOpts struct {
 	Translation Translation `group:"translation" namespace:"translation" env-namespace:"TRANSLATION"`
 }
 
-// HTTP holds REST server settings. REST and gRPC run together or independently;
-// each is on by default and can be turned off with its Disabled kill-switch
-// (go-flags bools always default to false, so we model "default on" as Disabled).
+// HTTP holds REST server settings. REST and gRPC run together or independently:
+// a server starts iff its Addr is non-empty, so an empty ADDR (e.g. HTTP_ADDR="")
+// turns that transport off without a separate kill-switch flag.
 type HTTP struct {
-	Disabled          bool          `long:"disabled"            env:"DISABLED"            description:"disable the REST server"`
-	Addr              string        `long:"addr"                env:"ADDR"                default:":8080"    description:"REST listen address"`
+	Addr              string        `long:"addr"                env:"ADDR"                default:":8080"    description:"REST listen address (empty disables the REST server)"`
 	ReadHeaderTimeout time.Duration `long:"read-header-timeout" env:"READ_HEADER_TIMEOUT" default:"5s"       description:"read header timeout"`
 	RequestTimeout    time.Duration `long:"request-timeout"     env:"REQUEST_TIMEOUT"     default:"30s"      description:"per-request timeout"`
 	ShutdownTimeout   time.Duration `long:"shutdown-timeout"    env:"SHUTDOWN_TIMEOUT"    default:"10s"      description:"graceful shutdown timeout"`
 	BodySizeLimit     int64         `long:"body-size-limit"     env:"BODY_SIZE_LIMIT"     default:"1048576"  description:"max request body size in bytes"`
 }
 
-// GRPC holds gRPC server settings.
+// GRPC holds gRPC server settings. The server starts iff Addr is non-empty
+// (set GRPC_ADDR="" to run REST-only).
 type GRPC struct {
-	Disabled        bool          `long:"disabled"         env:"DISABLED"         description:"disable the gRPC server"`
-	Addr            string        `long:"addr"             env:"ADDR"             default:":9090" description:"gRPC listen address"`
+	Addr            string        `long:"addr"             env:"ADDR"             default:":9090" description:"gRPC listen address (empty disables the gRPC server)"`
 	ShutdownTimeout time.Duration `long:"shutdown-timeout" env:"SHUTDOWN_TIMEOUT" default:"10s"   description:"graceful shutdown timeout"`
 	Reflection      bool          `long:"reflection"       env:"REFLECTION"       description:"enable server reflection"`
 	MaxRecvMiB      int           `long:"max-recv-mib"     env:"MAX_RECV_MIB"     default:"16"    description:"max receive message size, MiB"`
 	MaxSendMiB      int           `long:"max-send-mib"     env:"MAX_SEND_MIB"     default:"16"    description:"max send message size, MiB"`
 }
 
-// Debug toggles the debug endpoints (pprof + metrics + health). On by default
-// like the other servers. WHERE they are served — attached to the application
-// router or run on a separate internal port — is a wiring decision made in
-// app/server (see server.go), not a runtime flag.
+// Gateway serves the grpc-gateway JSON/HTTP proxy in front of the gRPC server,
+// on its own port. It starts iff Addr is non-empty AND the gRPC server is
+// enabled (it proxies to GRPC.Addr); it is independent of the hand-written REST
+// API and exposes the gRPC service as REST under /v1/widgets.
+type Gateway struct {
+	Addr string `long:"addr" env:"ADDR" default:":8081" description:"grpc-gateway listen address (empty disables it; requires the gRPC server)"`
+}
+
+// Debug serves the status endpoints (pprof + metrics + health) on its own
+// internal port. Like the other servers it starts iff Addr is non-empty, so
+// DEBUG_ADDR="" turns the status server off.
 type Debug struct {
-	Disabled bool   `long:"disabled" env:"DISABLED" description:"disable the debug/pprof endpoints"`
-	Addr     string `long:"addr"     env:"ADDR"     default:"localhost:6060" description:"debug listen address (pprof, metrics, health)"`
+	Addr string `long:"addr" env:"ADDR" default:"localhost:6060" description:"status listen address — pprof, metrics, health (empty disables it)"`
 }
 
 // DB holds Postgres connection settings.

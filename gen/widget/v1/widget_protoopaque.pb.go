@@ -4,7 +4,7 @@
 // 	protoc        (unknown)
 // source: widget/v1/widget.proto
 
-//go:build !protoopaque
+//go:build protoopaque
 
 package widgetv1
 
@@ -27,14 +27,14 @@ const (
 
 // Widget mirrors the domain entity over the wire.
 type Widget struct {
-	state         protoimpl.MessageState `protogen:"hybrid.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description" json:"description,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id          string                 `protobuf:"bytes,1,opt,name=id"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,2,opt,name=name"`
+	xxx_hidden_Description string                 `protobuf:"bytes,3,opt,name=description"`
+	xxx_hidden_CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt"`
+	xxx_hidden_UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *Widget) Reset() {
@@ -64,79 +64,79 @@ func (x *Widget) ProtoReflect() protoreflect.Message {
 
 func (x *Widget) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *Widget) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
 func (x *Widget) GetDescription() string {
 	if x != nil {
-		return x.Description
+		return x.xxx_hidden_Description
 	}
 	return ""
 }
 
 func (x *Widget) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
-		return x.CreatedAt
+		return x.xxx_hidden_CreatedAt
 	}
 	return nil
 }
 
 func (x *Widget) GetUpdatedAt() *timestamppb.Timestamp {
 	if x != nil {
-		return x.UpdatedAt
+		return x.xxx_hidden_UpdatedAt
 	}
 	return nil
 }
 
 func (x *Widget) SetId(v string) {
-	x.Id = v
+	x.xxx_hidden_Id = v
 }
 
 func (x *Widget) SetName(v string) {
-	x.Name = v
+	x.xxx_hidden_Name = v
 }
 
 func (x *Widget) SetDescription(v string) {
-	x.Description = v
+	x.xxx_hidden_Description = v
 }
 
 func (x *Widget) SetCreatedAt(v *timestamppb.Timestamp) {
-	x.CreatedAt = v
+	x.xxx_hidden_CreatedAt = v
 }
 
 func (x *Widget) SetUpdatedAt(v *timestamppb.Timestamp) {
-	x.UpdatedAt = v
+	x.xxx_hidden_UpdatedAt = v
 }
 
 func (x *Widget) HasCreatedAt() bool {
 	if x == nil {
 		return false
 	}
-	return x.CreatedAt != nil
+	return x.xxx_hidden_CreatedAt != nil
 }
 
 func (x *Widget) HasUpdatedAt() bool {
 	if x == nil {
 		return false
 	}
-	return x.UpdatedAt != nil
+	return x.xxx_hidden_UpdatedAt != nil
 }
 
 func (x *Widget) ClearCreatedAt() {
-	x.CreatedAt = nil
+	x.xxx_hidden_CreatedAt = nil
 }
 
 func (x *Widget) ClearUpdatedAt() {
-	x.UpdatedAt = nil
+	x.xxx_hidden_UpdatedAt = nil
 }
 
 type Widget_builder struct {
@@ -153,20 +153,20 @@ func (b0 Widget_builder) Build() *Widget {
 	m0 := &Widget{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.Id = b.Id
-	x.Name = b.Name
-	x.Description = b.Description
-	x.CreatedAt = b.CreatedAt
-	x.UpdatedAt = b.UpdatedAt
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Description = b.Description
+	x.xxx_hidden_CreatedAt = b.CreatedAt
+	x.xxx_hidden_UpdatedAt = b.UpdatedAt
 	return m0
 }
 
 type CreateWidgetRequest struct {
-	state         protoimpl.MessageState `protogen:"hybrid.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,2,opt,name=description" json:"description,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,1,opt,name=name"`
+	xxx_hidden_Description string                 `protobuf:"bytes,2,opt,name=description"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *CreateWidgetRequest) Reset() {
@@ -196,24 +196,24 @@ func (x *CreateWidgetRequest) ProtoReflect() protoreflect.Message {
 
 func (x *CreateWidgetRequest) GetName() string {
 	if x != nil {
-		return x.Name
+		return x.xxx_hidden_Name
 	}
 	return ""
 }
 
 func (x *CreateWidgetRequest) GetDescription() string {
 	if x != nil {
-		return x.Description
+		return x.xxx_hidden_Description
 	}
 	return ""
 }
 
 func (x *CreateWidgetRequest) SetName(v string) {
-	x.Name = v
+	x.xxx_hidden_Name = v
 }
 
 func (x *CreateWidgetRequest) SetDescription(v string) {
-	x.Description = v
+	x.xxx_hidden_Description = v
 }
 
 type CreateWidgetRequest_builder struct {
@@ -227,16 +227,16 @@ func (b0 CreateWidgetRequest_builder) Build() *CreateWidgetRequest {
 	m0 := &CreateWidgetRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.Name = b.Name
-	x.Description = b.Description
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Description = b.Description
 	return m0
 }
 
 type CreateWidgetResponse struct {
-	state         protoimpl.MessageState `protogen:"hybrid.v1"`
-	Widget        *Widget                `protobuf:"bytes,1,opt,name=widget" json:"widget,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Widget *Widget                `protobuf:"bytes,1,opt,name=widget"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CreateWidgetResponse) Reset() {
@@ -266,24 +266,24 @@ func (x *CreateWidgetResponse) ProtoReflect() protoreflect.Message {
 
 func (x *CreateWidgetResponse) GetWidget() *Widget {
 	if x != nil {
-		return x.Widget
+		return x.xxx_hidden_Widget
 	}
 	return nil
 }
 
 func (x *CreateWidgetResponse) SetWidget(v *Widget) {
-	x.Widget = v
+	x.xxx_hidden_Widget = v
 }
 
 func (x *CreateWidgetResponse) HasWidget() bool {
 	if x == nil {
 		return false
 	}
-	return x.Widget != nil
+	return x.xxx_hidden_Widget != nil
 }
 
 func (x *CreateWidgetResponse) ClearWidget() {
-	x.Widget = nil
+	x.xxx_hidden_Widget = nil
 }
 
 type CreateWidgetResponse_builder struct {
@@ -296,13 +296,13 @@ func (b0 CreateWidgetResponse_builder) Build() *CreateWidgetResponse {
 	m0 := &CreateWidgetResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.Widget = b.Widget
+	x.xxx_hidden_Widget = b.Widget
 	return m0
 }
 
 type GetWidgetRequest struct {
-	state         protoimpl.MessageState `protogen:"hybrid.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id string                 `protobuf:"bytes,1,opt,name=id"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -334,13 +334,13 @@ func (x *GetWidgetRequest) ProtoReflect() protoreflect.Message {
 
 func (x *GetWidgetRequest) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *GetWidgetRequest) SetId(v string) {
-	x.Id = v
+	x.xxx_hidden_Id = v
 }
 
 type GetWidgetRequest_builder struct {
@@ -353,15 +353,15 @@ func (b0 GetWidgetRequest_builder) Build() *GetWidgetRequest {
 	m0 := &GetWidgetRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.Id = b.Id
+	x.xxx_hidden_Id = b.Id
 	return m0
 }
 
 type GetWidgetResponse struct {
-	state         protoimpl.MessageState `protogen:"hybrid.v1"`
-	Widget        *Widget                `protobuf:"bytes,1,opt,name=widget" json:"widget,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Widget *Widget                `protobuf:"bytes,1,opt,name=widget"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *GetWidgetResponse) Reset() {
@@ -391,24 +391,24 @@ func (x *GetWidgetResponse) ProtoReflect() protoreflect.Message {
 
 func (x *GetWidgetResponse) GetWidget() *Widget {
 	if x != nil {
-		return x.Widget
+		return x.xxx_hidden_Widget
 	}
 	return nil
 }
 
 func (x *GetWidgetResponse) SetWidget(v *Widget) {
-	x.Widget = v
+	x.xxx_hidden_Widget = v
 }
 
 func (x *GetWidgetResponse) HasWidget() bool {
 	if x == nil {
 		return false
 	}
-	return x.Widget != nil
+	return x.xxx_hidden_Widget != nil
 }
 
 func (x *GetWidgetResponse) ClearWidget() {
-	x.Widget = nil
+	x.xxx_hidden_Widget = nil
 }
 
 type GetWidgetResponse_builder struct {
@@ -421,12 +421,12 @@ func (b0 GetWidgetResponse_builder) Build() *GetWidgetResponse {
 	m0 := &GetWidgetResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.Widget = b.Widget
+	x.xxx_hidden_Widget = b.Widget
 	return m0
 }
 
 type ListWidgetsRequest struct {
-	state         protoimpl.MessageState `protogen:"hybrid.v1"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -469,10 +469,10 @@ func (b0 ListWidgetsRequest_builder) Build() *ListWidgetsRequest {
 }
 
 type ListWidgetsResponse struct {
-	state         protoimpl.MessageState `protogen:"hybrid.v1"`
-	Widgets       []*Widget              `protobuf:"bytes,1,rep,name=widgets" json:"widgets,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Widgets *[]*Widget             `protobuf:"bytes,1,rep,name=widgets"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ListWidgetsResponse) Reset() {
@@ -502,13 +502,15 @@ func (x *ListWidgetsResponse) ProtoReflect() protoreflect.Message {
 
 func (x *ListWidgetsResponse) GetWidgets() []*Widget {
 	if x != nil {
-		return x.Widgets
+		if x.xxx_hidden_Widgets != nil {
+			return *x.xxx_hidden_Widgets
+		}
 	}
 	return nil
 }
 
 func (x *ListWidgetsResponse) SetWidgets(v []*Widget) {
-	x.Widgets = v
+	x.xxx_hidden_Widgets = &v
 }
 
 type ListWidgetsResponse_builder struct {
@@ -521,19 +523,19 @@ func (b0 ListWidgetsResponse_builder) Build() *ListWidgetsResponse {
 	m0 := &ListWidgetsResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.Widgets = b.Widgets
+	x.xxx_hidden_Widgets = &b.Widgets
 	return m0
 }
 
 type UpdateWidgetRequest struct {
-	state protoimpl.MessageState `protogen:"hybrid.v1"`
-	Id    string                 `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
-	// Explicit presence so the server can distinguish "unset" from "empty"
-	// (partial update), the editions equivalent of proto3 `optional`.
-	Name          *string `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
-	Description   *string `protobuf:"bytes,3,opt,name=description" json:"description,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id          string                 `protobuf:"bytes,1,opt,name=id"`
+	xxx_hidden_Name        *string                `protobuf:"bytes,2,opt,name=name"`
+	xxx_hidden_Description *string                `protobuf:"bytes,3,opt,name=description"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *UpdateWidgetRequest) Reset() {
@@ -563,57 +565,67 @@ func (x *UpdateWidgetRequest) ProtoReflect() protoreflect.Message {
 
 func (x *UpdateWidgetRequest) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *UpdateWidgetRequest) GetName() string {
-	if x != nil && x.Name != nil {
-		return *x.Name
+	if x != nil {
+		if x.xxx_hidden_Name != nil {
+			return *x.xxx_hidden_Name
+		}
+		return ""
 	}
 	return ""
 }
 
 func (x *UpdateWidgetRequest) GetDescription() string {
-	if x != nil && x.Description != nil {
-		return *x.Description
+	if x != nil {
+		if x.xxx_hidden_Description != nil {
+			return *x.xxx_hidden_Description
+		}
+		return ""
 	}
 	return ""
 }
 
 func (x *UpdateWidgetRequest) SetId(v string) {
-	x.Id = v
+	x.xxx_hidden_Id = v
 }
 
 func (x *UpdateWidgetRequest) SetName(v string) {
-	x.Name = &v
+	x.xxx_hidden_Name = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
 }
 
 func (x *UpdateWidgetRequest) SetDescription(v string) {
-	x.Description = &v
+	x.xxx_hidden_Description = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 3)
 }
 
 func (x *UpdateWidgetRequest) HasName() bool {
 	if x == nil {
 		return false
 	}
-	return x.Name != nil
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
 func (x *UpdateWidgetRequest) HasDescription() bool {
 	if x == nil {
 		return false
 	}
-	return x.Description != nil
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
 }
 
 func (x *UpdateWidgetRequest) ClearName() {
-	x.Name = nil
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Name = nil
 }
 
 func (x *UpdateWidgetRequest) ClearDescription() {
-	x.Description = nil
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_Description = nil
 }
 
 type UpdateWidgetRequest_builder struct {
@@ -630,17 +642,23 @@ func (b0 UpdateWidgetRequest_builder) Build() *UpdateWidgetRequest {
 	m0 := &UpdateWidgetRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.Id = b.Id
-	x.Name = b.Name
-	x.Description = b.Description
+	x.xxx_hidden_Id = b.Id
+	if b.Name != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
+		x.xxx_hidden_Name = b.Name
+	}
+	if b.Description != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 3)
+		x.xxx_hidden_Description = b.Description
+	}
 	return m0
 }
 
 type UpdateWidgetResponse struct {
-	state         protoimpl.MessageState `protogen:"hybrid.v1"`
-	Widget        *Widget                `protobuf:"bytes,1,opt,name=widget" json:"widget,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Widget *Widget                `protobuf:"bytes,1,opt,name=widget"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UpdateWidgetResponse) Reset() {
@@ -670,24 +688,24 @@ func (x *UpdateWidgetResponse) ProtoReflect() protoreflect.Message {
 
 func (x *UpdateWidgetResponse) GetWidget() *Widget {
 	if x != nil {
-		return x.Widget
+		return x.xxx_hidden_Widget
 	}
 	return nil
 }
 
 func (x *UpdateWidgetResponse) SetWidget(v *Widget) {
-	x.Widget = v
+	x.xxx_hidden_Widget = v
 }
 
 func (x *UpdateWidgetResponse) HasWidget() bool {
 	if x == nil {
 		return false
 	}
-	return x.Widget != nil
+	return x.xxx_hidden_Widget != nil
 }
 
 func (x *UpdateWidgetResponse) ClearWidget() {
-	x.Widget = nil
+	x.xxx_hidden_Widget = nil
 }
 
 type UpdateWidgetResponse_builder struct {
@@ -700,13 +718,13 @@ func (b0 UpdateWidgetResponse_builder) Build() *UpdateWidgetResponse {
 	m0 := &UpdateWidgetResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.Widget = b.Widget
+	x.xxx_hidden_Widget = b.Widget
 	return m0
 }
 
 type DeleteWidgetRequest struct {
-	state         protoimpl.MessageState `protogen:"hybrid.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id string                 `protobuf:"bytes,1,opt,name=id"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -738,13 +756,13 @@ func (x *DeleteWidgetRequest) ProtoReflect() protoreflect.Message {
 
 func (x *DeleteWidgetRequest) GetId() string {
 	if x != nil {
-		return x.Id
+		return x.xxx_hidden_Id
 	}
 	return ""
 }
 
 func (x *DeleteWidgetRequest) SetId(v string) {
-	x.Id = v
+	x.xxx_hidden_Id = v
 }
 
 type DeleteWidgetRequest_builder struct {
@@ -757,12 +775,12 @@ func (b0 DeleteWidgetRequest_builder) Build() *DeleteWidgetRequest {
 	m0 := &DeleteWidgetRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.Id = b.Id
+	x.xxx_hidden_Id = b.Id
 	return m0
 }
 
 type DeleteWidgetResponse struct {
-	state         protoimpl.MessageState `protogen:"hybrid.v1"`
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

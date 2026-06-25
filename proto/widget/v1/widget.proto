@@ -2,14 +2,19 @@ edition = "2023";
 
 package widget.v1;
 
+import "google/api/annotations.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/assanoff/service-kit-x/gen/widget/v1;widgetv1";
 
-// Use Google's Opaque API for Go: monolithic generated code, lazy decoding,
-// fewer allocations (the official performance path that replaces vtprotobuf).
-option features.(pb.go).api_level = API_OPAQUE;
+// HYBRID Go API: the opaque accessors/builders (Get*/Set*/Type_builder) used by
+// the gRPC handler PLUS the exported struct fields that protoc-gen-grpc-gateway
+// requires for path parameters (it assigns protoReq.Id directly). Pure
+// API_OPAQUE hides those fields and breaks the gateway; HYBRID is the bridge for
+// an entity exposed over BOTH gRPC and the gateway. gRPC-only entities can stay
+// API_OPAQUE.
+option features.(pb.go).api_level = API_HYBRID;
 
 // Keep proto3-like semantics by default: singular fields have no presence.
 // Fields that need presence opt in with [features.field_presence = EXPLICIT].
@@ -60,11 +65,30 @@ message DeleteWidgetRequest {
 }
 message DeleteWidgetResponse {}
 
-// WidgetService is the gRPC counterpart of the REST widget API.
+// WidgetService is the gRPC counterpart of the REST widget API. The
+// google.api.http annotations let protoc-gen-grpc-gateway generate a JSON/HTTP
+// proxy (served under /v1/widgets on the gateway's own port) — independent of
+// the hand-written REST API.
 service WidgetService {
-  rpc CreateWidget(CreateWidgetRequest) returns (CreateWidgetResponse);
-  rpc GetWidget(GetWidgetRequest) returns (GetWidgetResponse);
-  rpc ListWidgets(ListWidgetsRequest) returns (ListWidgetsResponse);
-  rpc UpdateWidget(UpdateWidgetRequest) returns (UpdateWidgetResponse);
-  rpc DeleteWidget(DeleteWidgetRequest) returns (DeleteWidgetResponse);
+  rpc CreateWidget(CreateWidgetRequest) returns (CreateWidgetResponse) {
+    option (google.api.http) = {
+      post: "/v1/widgets"
+      body: "*"
+    };
+  }
+  rpc GetWidget(GetWidgetRequest) returns (GetWidgetResponse) {
+    option (google.api.http) = {get: "/v1/widgets/{id}"};
+  }
+  rpc ListWidgets(ListWidgetsRequest) returns (ListWidgetsResponse) {
+    option (google.api.http) = {get: "/v1/widgets"};
+  }
+  rpc UpdateWidget(UpdateWidgetRequest) returns (UpdateWidgetResponse) {
+    option (google.api.http) = {
+      patch: "/v1/widgets/{id}"
+      body: "*"
+    };
+  }
+  rpc DeleteWidget(DeleteWidgetRequest) returns (DeleteWidgetResponse) {
+    option (google.api.http) = {delete: "/v1/widgets/{id}"};
+  }
 }

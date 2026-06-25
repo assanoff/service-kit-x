@@ -30,7 +30,10 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// WidgetService is the gRPC counterpart of the REST widget API.
+// WidgetService is the gRPC counterpart of the REST widget API. The
+// google.api.http annotations let protoc-gen-grpc-gateway generate a JSON/HTTP
+// proxy (served under /v1/widgets on the gateway's own port) — independent of
+// the hand-written REST API.
 type WidgetServiceClient interface {
 	CreateWidget(ctx context.Context, in *CreateWidgetRequest, opts ...grpc.CallOption) (*CreateWidgetResponse, error)
 	GetWidget(ctx context.Context, in *GetWidgetRequest, opts ...grpc.CallOption) (*GetWidgetResponse, error)
@@ -101,7 +104,10 @@ func (c *widgetServiceClient) DeleteWidget(ctx context.Context, in *DeleteWidget
 // All implementations must embed UnimplementedWidgetServiceServer
 // for forward compatibility.
 //
-// WidgetService is the gRPC counterpart of the REST widget API.
+// WidgetService is the gRPC counterpart of the REST widget API. The
+// google.api.http annotations let protoc-gen-grpc-gateway generate a JSON/HTTP
+// proxy (served under /v1/widgets on the gateway's own port) — independent of
+// the hand-written REST API.
 type WidgetServiceServer interface {
 	CreateWidget(context.Context, *CreateWidgetRequest) (*CreateWidgetResponse, error)
 	GetWidget(context.Context, *GetWidgetRequest) (*GetWidgetResponse, error)

@@ -29,8 +29,8 @@ func (c *ServeCommand) Execute(_ []string) error {
 	defer func() { _ = closer.CloseSync() }()
 
 	log.Info(ctx, "starting service",
-		"env", cfg.Env, "http_enabled", !cfg.HTTP.Disabled, "http", cfg.HTTP.Addr,
-		"grpc_enabled", !cfg.GRPC.Disabled, "grpc", cfg.GRPC.Addr)
+		"env", cfg.Env, "http_enabled", cfg.HTTP.Addr != "", "http", cfg.HTTP.Addr,
+		"grpc_enabled", cfg.GRPC.Addr != "", "grpc", cfg.GRPC.Addr)
 
 	app, err := server.New(ctx, cfg, log)
 	if err != nil {

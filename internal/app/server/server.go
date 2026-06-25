@@ -1,22 +1,30 @@
 // Package server assembles the application the lavka-promoaction way: it builds
 // the Deps container, runs deps.InitDeps (which registers resource cleanups with
-// the global closer), then supervises the enabled transports (REST, gRPC) via a
-// worker.Group. Resource shutdown is owned by the global closer; the caller runs
+// the global closer), then composes the enabled transports (REST, gRPC,
+// grpc-gateway, status) into a servicekit server.Set and supervises them via a
+// worker.Group. Each brick starts iff its Addr is set, so they run independently.
+// Resource shutdown is owned by the global closer; the caller runs
 // closer.CloseSync after Run returns.
 package server
 
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/assanoff/servicekit/broker/rabbitmq"
+	"github.com/assanoff/servicekit/closer"
 	"github.com/assanoff/servicekit/debugsrv"
+	"github.com/assanoff/servicekit/grpcgateway"
 	"github.com/assanoff/servicekit/grpcserver"
 	"github.com/assanoff/servicekit/health"
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/metrics"
 	"github.com/assanoff/servicekit/outbox"
+	"github.com/assanoff/servicekit/server"
+	"github.com/assanoff/servicekit/web/httpserver"
+	"github.com/assanoff/servicekit/web/rest"
 	"github.com/assanoff/servicekit/worker"
 
 	"github.com/assanoff/service-kit-x/core/widgetaudit"
@@ -41,47 +49,92 @@ func New(ctx context.Context, opts config.ServerOpts, log *logger.Logger) (*App,
 	}
 	m := metrics.New("servicekit")
 
-	// Debug endpoints (pprof + metrics + health). Here they are attached to the
-	// application router (buildRouter mounts debugsrv.Handler at debugsrv.Paths).
-	// To instead serve them on a separate internal port, leave embedDebug nil and
-	// add a standalone server to the group:
-	//
-	//	group.Add(debugsrv.New(debugsrv.Config{
-	//		Addr: opts.Debug.Addr, Logger: log.Slog(),
-	//		MetricsHandler: m.Handler(), Liveness: health.Liveness(), Readiness: readiness(d),
-	//	}))
-	var embedDebug *debugsrv.Config
-	if !opts.Debug.Disabled {
-		embedDebug = &debugsrv.Config{
+	// Extra runnables: background workers + (optionally) the broker pipeline.
+	// They are supervised alongside the servers, after the four named bricks.
+	var extra []worker.Runnable
+	if !opts.Worker.Disabled {
+		extra = append(extra,
+			d.WidgetImport(ctx).NewLoop(widgetimport.Config{
+				Interval:  opts.Worker.Interval,
+				BatchSize: opts.Worker.BatchSize,
+			}),
+			// The widget-count poller refreshes the cached count served by
+			// GET /widgets/count; it is a worker.Runnable.
+			d.WidgetCount(ctx),
+		)
+	}
+	if opts.Broker.Enabled {
+		bw, err := brokerWorkers(ctx, opts, d, m)
+		if err != nil {
+			return nil, err
+		}
+		extra = append(extra, bw...)
+	}
+
+	gateway, err := buildGateway(ctx, opts, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compose the server set: REST, gRPC, grpc-gateway and the status server each
+	// run as independent worker.Runnables, each on its own listener. A brick is
+	// included only when its Addr is set (server.REST/Enabled/HTTP/Status return
+	// nil for an empty Addr), so an empty *_ADDR turns that transport off without
+	// a kill-switch flag. The status server lives on its own internal port so
+	// metrics and probes survive independently of REST (the REST router still
+	// exposes /healthz and /readyz for convenience — buildRouter with a nil debug
+	// config mounts the probes but not pprof/metrics).
+	set := server.Set{
+		REST: server.REST(rest.ServerConfig{
+			Addr:              opts.HTTP.Addr,
+			ReadHeaderTimeout: opts.HTTP.ReadHeaderTimeout,
+			ShutdownTimeout:   opts.HTTP.ShutdownTimeout,
+			Logger:            log.Slog(),
+		}, buildRouter(ctx, d, m, nil)),
+		GRPC:    server.Enabled(opts.GRPC.Addr, buildGRPCServer(ctx, opts.GRPC, d, m)),
+		Gateway: gateway,
+		Status: server.Status(debugsrv.Config{
+			Addr:           opts.Debug.Addr,
+			Logger:         log.Slog(),
 			MetricsHandler: m.Handler(),
 			Liveness:       health.Liveness(),
 			Readiness:      readiness(d),
-		}
+		}),
+		Extra: extra,
 	}
 
-	group := worker.NewGroup(log.Slog(), opts.HTTP.ShutdownTimeout)
-	if !opts.HTTP.Disabled {
-		group.Add(newRestServer(opts.HTTP, log, buildRouter(ctx, d, m, embedDebug)))
-	}
-	if !opts.GRPC.Disabled {
-		group.Add(buildGRPCServer(ctx, opts.GRPC, d, m))
-	}
-	if !opts.Worker.Disabled {
-		group.Add(d.WidgetImport(ctx).NewLoop(widgetimport.Config{
-			Interval:  opts.Worker.Interval,
-			BatchSize: opts.Worker.BatchSize,
-		}))
-		// The widget-count poller refreshes the cached count served by
-		// GET /widgets/count; it is a worker.Runnable supervised here.
-		group.Add(d.WidgetCount(ctx))
-	}
-	if opts.Broker.Enabled {
-		if err := addBrokerWorkers(ctx, opts, d, group, m); err != nil {
-			return nil, err
-		}
-	}
+	return &App{log: log, group: set.Group(log.Slog(), opts.HTTP.ShutdownTimeout)}, nil
+}
 
-	return &App{log: log, group: group}, nil
+// buildGateway builds the grpc-gateway brick — a JSON/HTTP proxy in front of the
+// gRPC server, on its own port — or returns nil when the gateway or the gRPC
+// server it proxies to is disabled. The dialed gRPC connection is released via
+// the global closer on shutdown.
+func buildGateway(ctx context.Context, opts config.ServerOpts, log *logger.Logger) (worker.Runnable, error) {
+	if opts.Gateway.Addr == "" || opts.GRPC.Addr == "" {
+		return nil, nil
+	}
+	gw, err := grpcgateway.New(ctx, grpcgateway.Config{
+		Endpoint: dialTarget(opts.GRPC.Addr),
+	}, widgetv1.RegisterWidgetServiceHandler)
+	if err != nil {
+		return nil, err
+	}
+	closer.Add(gw.Close)
+	return server.HTTP(httpserver.Config{
+		Name:            "gateway-server",
+		Addr:            opts.Gateway.Addr,
+		ShutdownTimeout: opts.GRPC.ShutdownTimeout,
+		Logger:          log.Slog(),
+	}, gw), nil
+}
+
+// dialTarget makes a listen address dialable: ":9090" -> "localhost:9090".
+func dialTarget(addr string) string {
+	if strings.HasPrefix(addr, ":") {
+		return "localhost" + addr
+	}
+	return addr
 }
 
 // readiness builds the readiness handler (DB ping) shared by the embedded and
@@ -93,18 +146,20 @@ func readiness(d *deps.Deps) http.Handler {
 	})
 }
 
-// addBrokerWorkers registers the transactional-outbox workers (relay, sweeper,
+// brokerWorkers builds the transactional-outbox workers (relay, sweeper,
 // cleaner) and the widget-audit consumer that together form the reliable
-// publish->consume pipeline. Outbox metrics are registered on the shared
-// registry m, so they sit alongside the HTTP/gRPC and any business metrics on
-// the same /metrics endpoint without colliding (distinct servicekit_outbox_*
-// names).
-func addBrokerWorkers(ctx context.Context, opts config.ServerOpts, d *deps.Deps, group *worker.Group, m *metrics.Metrics) error {
+// publish->consume pipeline, returning them as runnables for the server set's
+// Extra slice. Outbox metrics are registered on the shared registry m, so they
+// sit alongside the HTTP/gRPC and any business metrics on the same /metrics
+// endpoint without colliding (distinct servicekit_outbox_* names).
+func brokerWorkers(ctx context.Context, opts config.ServerOpts, d *deps.Deps, m *metrics.Metrics) ([]worker.Runnable, error) {
 	ob := d.Outbox(ctx)
 	om := outbox.NewMetrics(m.Registry)
-	group.Add(outbox.NewRelay(d.Logger, ob, d.Publisher(ctx), outbox.RelayConfig{Metrics: om}))
-	group.Add(outbox.NewSweeper(d.Logger, ob, outbox.SweeperConfig{Metrics: om}))
-	group.Add(outbox.NewCleaner(d.Logger, ob, outbox.CleanerConfig{Metrics: om}))
+	runnables := []worker.Runnable{
+		outbox.NewRelay(d.Logger, ob, d.Publisher(ctx), outbox.RelayConfig{Metrics: om}),
+		outbox.NewSweeper(d.Logger, ob, outbox.SweeperConfig{Metrics: om}),
+		outbox.NewCleaner(d.Logger, ob, outbox.CleanerConfig{Metrics: om}),
+	}
 
 	// Backlog gauges query the store on each scrape; register the collector when
 	// the store supports it (the Postgres store does).
@@ -120,10 +175,9 @@ func addBrokerWorkers(ctx context.Context, opts config.ServerOpts, d *deps.Deps,
 		Name:        "widget-audit",
 	}, recorder.Handle)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	group.Add(consumer)
-	return nil
+	return append(runnables, consumer), nil
 }
 
 // Run starts all runnables and blocks until ctx is canceled or one fails.
