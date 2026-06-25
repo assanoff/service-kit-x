@@ -22,7 +22,11 @@ import (
 	"github.com/assanoff/servicekit/queue"
 	"github.com/assanoff/servicekit/translation"
 
+	productapi "github.com/assanoff/service-kit-x/api/product"
+	userapi "github.com/assanoff/service-kit-x/api/user"
 	widgetapi "github.com/assanoff/service-kit-x/api/widget"
+	"github.com/assanoff/service-kit-x/core/product"
+	"github.com/assanoff/service-kit-x/core/user"
 	"github.com/assanoff/service-kit-x/core/widget"
 	"github.com/assanoff/service-kit-x/core/widgetimport"
 	"github.com/assanoff/service-kit-x/internal/app/config"
@@ -51,6 +55,12 @@ type Deps struct {
 	WidgetCount   dim.Provider[*poller.Poller[int]]
 	WidgetHandler dim.Provider[*widgetapi.Handler]
 	WidgetGRPC    dim.Provider[*widgetgrpc.Handler]
+
+	UserCore    dim.Provider[*user.Core]
+	UserHandler dim.Provider[*userapi.Handler]
+
+	ProductCore    dim.Provider[*product.Core]
+	ProductHandler dim.Provider[*productapi.Handler]
 }
 
 // Initializers runs in order: infrastructure first, then core, then handlers.
@@ -72,10 +82,14 @@ var Initializers = []app.Initializer[Deps]{
 	initWidgetCore,
 	initWidgetImport,
 	initWidgetCount,
+	initUserCore,
+	initProductCore,
 
 	// Handlers
 	initWidgetHandler,
 	initWidgetGRPC,
+	initUserHandler,
+	initProductHandler,
 }
 
 // Storage is the minimal initializer set for DB-only commands (e.g. a one-shot

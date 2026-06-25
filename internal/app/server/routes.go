@@ -122,6 +122,17 @@ func Install(ctx context.Context, r *router.Router, d *deps.Deps, m *metrics.Met
 	}
 	d.WidgetHandler(ctx).Routes(handle, authMW...)
 
+	// user demonstrates per-route authorization: reads are public, each write
+	// gets authMW. So it receives the business group's handle directly and scopes
+	// auth itself, route by route.
+	d.UserHandler(ctx).Routes(handle, authMW...)
+
+	// product demonstrates group-scoped authorization: the whole product group —
+	// including reads — runs authMW. We wrap it once with WithApp (the typed-layer
+	// twin of With) and hand the feature that group's HandleApp; the feature adds
+	// no per-route auth of its own.
+	d.ProductHandler(ctx).Routes(api.WithApp(authMW...).HandleApp)
+
 	// Audit-log read API (history / diff / changed-fields), mounted in one call.
 	// Reads are public here; pass authMW to restrict them to admins if needed.
 	auditrest.NewHandlers(d.AuditLog(ctx)).Routes(handle)
