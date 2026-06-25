@@ -77,3 +77,8 @@ var Initializers = []app.Initializer[Deps]{
 	initWidgetHandler,
 	initWidgetGRPC,
 }
+
+// Storage is the minimal initializer set for DB-only commands (e.g. a one-shot
+// CLI job): it wires just the Postgres store. Compose subsets like this and pass
+// them to app.RunCommand so a command connects only what it needs.
+var Storage = []app.Initializer[Deps]{initStore}

@@ -2,10 +2,8 @@ package cmd
 
 import (
 	"context"
-	"os/signal"
-	"syscall"
 
-	"github.com/assanoff/servicekit/closer"
+	"github.com/assanoff/servicekit/app"
 
 	"github.com/assanoff/service-kit-x/internal/app/config"
 	"github.com/assanoff/service-kit-x/internal/app/server"
@@ -21,26 +19,20 @@ type ServeCommand struct {
 func (c *ServeCommand) Execute(_ []string) error {
 	cfg := c.ServerOpts
 	log := buildLogger(cfg)
-
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
-
-	// Release resources (DB, tracer, ...) in LIFO order even on startup failure.
-	defer func() { _ = closer.CloseSync() }()
+	ctx := context.Background()
 
 	log.Info(ctx, "starting service",
-		"env", cfg.Env, "http_enabled", cfg.HTTP.Addr != "", "http", cfg.HTTP.Addr,
-		"grpc_enabled", cfg.GRPC.Addr != "", "grpc", cfg.GRPC.Addr)
+		"env", cfg.Env, "http", cfg.HTTP.Addr, "grpc", cfg.GRPC.Addr, "gateway", cfg.Gateway.Addr)
 
-	app, err := server.New(ctx, cfg, log)
+	a, err := server.New(ctx, cfg, log)
 	if err != nil {
 		return err
 	}
 
-	if err := app.Run(ctx); err != nil && ctx.Err() == nil {
-		return err
-	}
-
-	log.Info(context.Background(), "service stopped")
-	return nil
+	// app.Run owns the signal context, the worker.Group supervision, and the
+	// global closer (LIFO resource release) — see internal/app/deps + provider.
+	return app.Run(ctx, app.RunConfig{
+		Logger:          log.Slog(),
+		ShutdownTimeout: cfg.HTTP.ShutdownTimeout,
+	}, a.Runnables()...)
 }

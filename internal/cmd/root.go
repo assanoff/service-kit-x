@@ -20,6 +20,7 @@ import (
 type Opts struct {
 	Serve   ServeCommand   `command:"serve" description:"run the REST and/or gRPC server"`
 	Migrate MigrateCommand `command:"migrate" description:"apply database migrations (up|down|status)"`
+	Count   CountCommand   `command:"count" description:"print the number of widgets (DB-only command demo)"`
 	Version VersionCommand `command:"version" description:"print the build version"`
 }
 

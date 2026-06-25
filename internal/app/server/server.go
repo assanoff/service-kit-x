@@ -35,10 +35,9 @@ import (
 	"github.com/assanoff/service-kit-x/internal/app/deps"
 )
 
-// App is the assembled, runnable application.
+// App is the assembled application: the set of supervised servers and workers.
 type App struct {
-	log   *logger.Logger
-	group *worker.Group
+	set server.Set
 }
 
 // New builds the application: initializes dependencies (cleanups go to the
@@ -104,7 +103,7 @@ func New(ctx context.Context, opts config.ServerOpts, log *logger.Logger) (*App,
 		Extra: extra,
 	}
 
-	return &App{log: log, group: set.Group(log.Slog(), opts.HTTP.ShutdownTimeout)}, nil
+	return &App{set: set}, nil
 }
 
 // buildGateway builds the grpc-gateway brick — a JSON/HTTP proxy in front of the
@@ -181,10 +180,9 @@ func brokerWorkers(ctx context.Context, opts config.ServerOpts, d *deps.Deps, m 
 	return append(runnables, consumer), nil
 }
 
-// Run starts all runnables and blocks until ctx is canceled or one fails.
-func (a *App) Run(ctx context.Context) error {
-	return a.group.Run(ctx)
-}
+// Runnables returns the supervised transports and workers, ready to hand to
+// app.Run (which owns the signal context, worker.Group and closer lifecycle).
+func (a *App) Runnables() []worker.Runnable { return a.set.Runnables() }
 
 // Handler builds the REST handler (middleware + technical and business routes).
 // Exported so integration tests can drive the HTTP stack via httptest.
