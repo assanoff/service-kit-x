@@ -99,7 +99,7 @@ func TestWidgetImportQueue(t *testing.T) {
 
 	// Enqueue 20 batches of 5 widgets each = 100 widgets.
 	const batches, perBatch = 20, 5
-	for b := 0; b < batches; b++ {
+	for b := range batches {
 		ws := make([]widget.NewWidget, perBatch)
 		for i := range ws {
 			ws[i] = widget.NewWidget{Name: fmt.Sprintf("imported-%d-%d", b, i)}

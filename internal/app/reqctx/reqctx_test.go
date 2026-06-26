@@ -13,7 +13,7 @@ import (
 
 func TestMiddlewareParsesHeaders(t *testing.T) {
 	var got reqctx.RequestContext
-	h := reqctx.Middleware()(func(ctx context.Context, _ *http.Request) rest.Encoder {
+	h := reqctx.Middleware()(func(ctx context.Context, _ *http.Request) rest.ResponseEncoder {
 		got = reqctx.FromContext(ctx)
 		return nil
 	})
@@ -46,7 +46,7 @@ func TestGettersAndEmpty(t *testing.T) {
 	// A malformed integer header parses to 0.
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set("X-City-ID", "not-a-number")
-	h := reqctx.Middleware()(func(ctx context.Context, _ *http.Request) rest.Encoder {
+	h := reqctx.Middleware()(func(ctx context.Context, _ *http.Request) rest.ResponseEncoder {
 		if reqctx.CityID(ctx) != 0 {
 			t.Errorf("malformed CityID = %d, want 0", reqctx.CityID(ctx))
 		}

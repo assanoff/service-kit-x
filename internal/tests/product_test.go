@@ -125,7 +125,7 @@ func TestProductCursorPagination(t *testing.T) {
 
 	const total = 5
 	created := map[string]bool{}
-	for i := 0; i < total; i++ {
+	for i := range total {
 		body := fmt.Sprintf(`{"name":"P%d","price":%d}`, i, (i+1)*100)
 		resp := doReq(t, srv, http.MethodPost, "/products", body)
 		is.Equal(resp.StatusCode, http.StatusCreated)
@@ -190,7 +190,7 @@ func TestProductListPaginationMeta(t *testing.T) {
 	ctx := context.Background()
 	srv, _ := newTestServer(ctx, t)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		resp := doReq(t, srv, http.MethodPost, "/products", fmt.Sprintf(`{"name":"P%d","price":100}`, i))
 		is.Equal(resp.StatusCode, http.StatusCreated)
 		_ = resp.Body.Close()

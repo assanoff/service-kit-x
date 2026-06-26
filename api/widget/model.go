@@ -50,7 +50,7 @@ type CountResponse struct {
 
 // Response is the REST representation of a widget. The translate tags mark the
 // fields the translationrest middleware translates into the request language;
-// Response is both a rest.Encoder and a translation.Translatable, so the
+// Response is both a rest.ResponseEncoder and a translation.Translatable, so the
 // middleware can reach and translate it without per-handler code.
 type Response struct {
 	ID          string    `json:"id" translate:"primary"`
@@ -66,7 +66,7 @@ func (r *Response) GetTranslationKey() (modelName, keyID string) {
 	return widgetcore.AuditModelType, r.ID
 }
 
-// Encode implements rest.Encoder.
+// Encode implements rest.ResponseEncoder.
 func (r *Response) Encode() ([]byte, string, error) {
 	b, err := json.Marshal(r)
 	return b, "application/json", err
@@ -74,7 +74,7 @@ func (r *Response) Encode() ([]byte, string, error) {
 
 // ResponseList is a collection of widget responses. It implements
 // translation.TranslatableList so the middleware translates every item in one
-// batch query, and rest.Encoder so it can be returned directly from a handler.
+// batch query, and rest.ResponseEncoder so it can be returned directly from a handler.
 type ResponseList []*Response
 
 // Translatables implements translation.TranslatableList.
@@ -86,7 +86,7 @@ func (l ResponseList) Translatables() []translation.Translatable {
 	return out
 }
 
-// Encode implements rest.Encoder.
+// Encode implements rest.ResponseEncoder.
 func (l ResponseList) Encode() ([]byte, string, error) {
 	b, err := json.Marshal(l)
 	return b, "application/json", err

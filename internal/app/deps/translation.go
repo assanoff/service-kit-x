@@ -20,7 +20,7 @@ var initTranslation = func(c *Deps) (dim.CleanupFunc, error) {
 		t := c.Opts.Translation
 
 		var supported []translation.Language
-		for _, code := range strings.Split(t.Supported, ",") {
+		for code := range strings.SplitSeq(t.Supported, ",") {
 			if code = strings.TrimSpace(code); code != "" {
 				supported = append(supported, translation.Language{Code: code})
 			}

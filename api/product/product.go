@@ -4,7 +4,7 @@
 // server's Install via router.WithApp(authMW...). Every product endpoint —
 // including reads — therefore requires authorization when auth is enabled.
 // Contrast the user module, which guards only its writes per route. Handlers are
-// rest.HandlerFunc values returning an Encoder (a DTO or an *errs.Error).
+// rest.HandlerFunc values returning a ResponseEncoder (a DTO or an *errs.Error).
 package product
 
 import (
@@ -52,7 +52,7 @@ func (h *Handler) Routes(handle rest.Handle) {
 }
 
 // create creates a single product.
-func (h *Handler) create(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) create(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	var req CreateProductReq
 	if err := rest.Decode(r, &req); err != nil {
 		return errs.From(err)
@@ -69,7 +69,7 @@ func (h *Handler) create(ctx context.Context, r *http.Request) rest.Encoder {
 // filter params (?name, ?min_price, ?max_price) and ordered by ?order_by
 // (e.g. "name,DESC"; default created_at DESC). Count uses the same filter so the
 // total matches the filtered set.
-func (h *Handler) query(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) query(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	q := r.URL.Query()
 	pg, err := page.Parse(q.Get("page"), q.Get("rows"))
 	if err != nil {
@@ -99,7 +99,7 @@ func (h *Handler) query(ctx context.Context, r *http.Request) rest.Encoder {
 // (the opaque token from a prior page's next, empty for the first page) and
 // ?limit=N. It returns a query.CursorResult carrying the items and the next-page
 // token. Forward-only — prev is not emitted.
-func (h *Handler) queryCursor(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) queryCursor(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit")) // 0/invalid -> NewCursor applies the default
 	cur := page.NewCursor(q.Get("cursor"), limit)
@@ -152,7 +152,7 @@ func parseOptInt(s string) (*int64, error) {
 }
 
 // queryByID returns one product by id.
-func (h *Handler) queryByID(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) queryByID(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	id, err := uuid.Parse(rest.Param(r, "id"))
 	if err != nil {
 		return errs.Newf(errs.InvalidArgument, "invalid id %q", rest.Param(r, "id"))
@@ -165,7 +165,7 @@ func (h *Handler) queryByID(ctx context.Context, r *http.Request) rest.Encoder {
 }
 
 // update applies a partial update to a product.
-func (h *Handler) update(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) update(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	id, err := uuid.Parse(rest.Param(r, "id"))
 	if err != nil {
 		return errs.Newf(errs.InvalidArgument, "invalid id %q", rest.Param(r, "id"))
@@ -184,7 +184,7 @@ func (h *Handler) update(ctx context.Context, r *http.Request) rest.Encoder {
 }
 
 // delete removes a product.
-func (h *Handler) delete(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) delete(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	id, err := uuid.Parse(rest.Param(r, "id"))
 	if err != nil {
 		return errs.Newf(errs.InvalidArgument, "invalid id %q", rest.Param(r, "id"))

@@ -19,8 +19,8 @@ type UpdateUserReq struct {
 	Name  *string `json:"name" validate:"omitempty,max=100"`
 }
 
-// Response is the REST representation of a user. It implements rest.Encoder, so
-// a handler returns it directly — the Encoder seam (plain JSON here; a module
+// Response is the REST representation of a user. It implements rest.ResponseEncoder, so
+// a handler returns it directly — the ResponseEncoder seam (plain JSON here; a module
 // may swap in JSON:API or protobuf by implementing Encode differently).
 type Response struct {
 	ID        string    `json:"id"`
@@ -30,7 +30,7 @@ type Response struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// Encode implements rest.Encoder.
+// Encode implements rest.ResponseEncoder.
 func (r *Response) Encode() ([]byte, string, error) {
 	b, err := json.Marshal(r)
 	return b, "application/json", err

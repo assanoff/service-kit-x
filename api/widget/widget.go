@@ -1,6 +1,6 @@
 // Package widget is the REST transport layer for the widget module. Handlers
 // are servicekit rest.HandlerFunc values: they decode/validate input, call the
-// Core, and return an Encoder (a DTO or an *errs.Error).
+// Core, and return a ResponseEncoder (a DTO or an *errs.Error).
 package widget
 
 import (
@@ -87,7 +87,7 @@ func (h *Handler) Routes(handle rest.Handle) {
 //	@Success	202		{object}	ImportResponse
 //	@Failure	400		{string}	string	"invalid argument"
 //	@Router		/widgets/import [post]
-func (h *Handler) importBatch(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) importBatch(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	var req ImportWidgetsReq
 	if err := rest.Decode(r, &req); err != nil {
 		return errs.From(err)
@@ -115,7 +115,7 @@ func (h *Handler) importBatch(ctx context.Context, r *http.Request) rest.Encoder
 //	@Success	201		{object}	Response
 //	@Failure	400		{string}	string	"invalid argument"
 //	@Router		/widgets [post]
-func (h *Handler) create(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) create(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	var req CreateWidgetReq
 	if err := rest.Decode(r, &req); err != nil {
 		return errs.From(err)
@@ -135,7 +135,7 @@ func (h *Handler) create(ctx context.Context, r *http.Request) rest.Encoder {
 //	@Produce	json
 //	@Success	200	{array}	Response
 //	@Router		/widgets [get]
-func (h *Handler) query(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) query(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	q := r.URL.Query()
 	pg, err := page.Parse(q.Get("page"), q.Get("rows"))
 	if err != nil {
@@ -166,7 +166,7 @@ func (h *Handler) query(ctx context.Context, r *http.Request) rest.Encoder {
 // the same ?name/?description filter. It returns a CursorPagedResponse (the
 // translatable counterpart of PagedResponse), so the translationrest middleware
 // still localizes each widget. Forward-only — prev is not emitted.
-func (h *Handler) queryCursor(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) queryCursor(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit")) // 0/invalid -> NewCursor applies the default
 	cur := page.NewCursor(q.Get("cursor"), limit)
@@ -204,7 +204,7 @@ func parseWidgetFilter(q url.Values) widgetcore.QueryFilter {
 //	@Produce	json
 //	@Success	200	{object}	CountResponse
 //	@Router		/widgets/count [get]
-func (h *Handler) count(_ context.Context, _ *http.Request) rest.Encoder {
+func (h *Handler) count(_ context.Context, _ *http.Request) rest.ResponseEncoder {
 	return rest.JSON(CountResponse{Count: h.counter.Current()})
 }
 
@@ -217,7 +217,7 @@ func (h *Handler) count(_ context.Context, _ *http.Request) rest.Encoder {
 //	@Success	200	{object}	Response
 //	@Failure	404	{string}	string	"not found"
 //	@Router		/widgets/{id} [get]
-func (h *Handler) queryByID(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) queryByID(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		return errs.Newf(errs.InvalidArgument, "invalid id %q", r.PathValue("id"))
@@ -240,7 +240,7 @@ func (h *Handler) queryByID(ctx context.Context, r *http.Request) rest.Encoder {
 //	@Tags		widgets
 //	@Produce	application/vnd.api+json
 //	@Router		/widgets/jsonapi [get]
-func (h *Handler) queryJSONAPI(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) queryJSONAPI(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	q := r.URL.Query()
 	pg, err := page.Parse(q.Get("page"), q.Get("rows"))
 	if err != nil {
@@ -265,7 +265,7 @@ func (h *Handler) queryJSONAPI(ctx context.Context, r *http.Request) rest.Encode
 //	@Produce	application/vnd.api+json
 //	@Param		id	path	string	true	"Widget ID"
 //	@Router		/widgets/jsonapi/{id} [get]
-func (h *Handler) queryByIDJSONAPI(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) queryByIDJSONAPI(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	id, err := uuid.Parse(rest.Param(r, "id"))
 	if err != nil {
 		return errs.Newf(errs.InvalidArgument, "invalid id %q", rest.Param(r, "id"))
@@ -290,7 +290,7 @@ func (h *Handler) queryByIDJSONAPI(ctx context.Context, r *http.Request) rest.En
 //	@Failure	400		{string}	string	"invalid argument"
 //	@Failure	404		{string}	string	"not found"
 //	@Router		/widgets/{id} [put]
-func (h *Handler) update(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) update(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		return errs.Newf(errs.InvalidArgument, "invalid id %q", r.PathValue("id"))
@@ -316,7 +316,7 @@ func (h *Handler) update(ctx context.Context, r *http.Request) rest.Encoder {
 //	@Success	204	"no content"
 //	@Failure	404	{string}	string	"not found"
 //	@Router		/widgets/{id} [delete]
-func (h *Handler) delete(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) delete(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		return errs.Newf(errs.InvalidArgument, "invalid id %q", r.PathValue("id"))
@@ -341,7 +341,7 @@ func (h *Handler) delete(ctx context.Context, r *http.Request) rest.Encoder {
 //	@Success	200	{object}	Response
 //	@Failure	400	{string}	string	"invalid argument"
 //	@Router		/widgets/{id}/translations [post]
-func (h *Handler) saveTranslation(ctx context.Context, r *http.Request) rest.Encoder {
+func (h *Handler) saveTranslation(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		return errs.Newf(errs.InvalidArgument, "invalid id %q", r.PathValue("id"))

@@ -26,7 +26,7 @@ func TestWidgetCursorPagination(t *testing.T) {
 
 	const total = 5
 	created := map[string]bool{}
-	for i := 0; i < total; i++ {
+	for i := range total {
 		body := fmt.Sprintf(`{"name":"W%d","description":"d%d"}`, i, i)
 		resp := doReq(t, srv, http.MethodPost, "/widgets", body)
 		is.Equal(resp.StatusCode, http.StatusCreated)
@@ -90,7 +90,7 @@ func TestWidgetListPaginationMeta(t *testing.T) {
 	ctx := context.Background()
 	srv, _ := newTestServer(ctx, t)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		resp := doReq(t, srv, http.MethodPost, "/widgets", fmt.Sprintf(`{"name":"W%d","description":""}`, i))
 		is.Equal(resp.StatusCode, http.StatusCreated)
 		_ = resp.Body.Close()

@@ -41,7 +41,7 @@ type ctxKey struct{}
 // outermost app middleware so everything else can read the resolved values.
 func Middleware() rest.MidFunc {
 	return func(next rest.HandlerFunc) rest.HandlerFunc {
-		return func(ctx context.Context, r *http.Request) rest.Encoder {
+		return func(ctx context.Context, r *http.Request) rest.ResponseEncoder {
 			rc := RequestContext{
 				Language: i18n.RequestLang(r),
 				TenantID: r.Header.Get(TenantHeader),

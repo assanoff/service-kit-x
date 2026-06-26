@@ -159,7 +159,7 @@ func Install(ctx context.Context, r *router.Router, d *deps.Deps, m *metrics.Met
 // compactHandler builds the on-demand audit-log compaction endpoint, closing over
 // the audit core and the configured compaction options.
 func compactHandler(core *auditlog.Core, a config.Audit) rest.HandlerFunc {
-	return func(ctx context.Context, _ *http.Request) rest.Encoder {
+	return func(ctx context.Context, _ *http.Request) rest.ResponseEncoder {
 		res, err := core.CompactBatch(ctx, auditlog.CompactBatchOptions{
 			Threshold: a.CompactThreshold,
 			Limit:     a.CompactLimit,
