@@ -1,4 +1,4 @@
-// Package server assembles the application the lavka-promoaction way: it builds
+// Package server assembles the application: it builds
 // the Deps container, runs app.InitDeps (which registers resource cleanups with
 // the global closer), then composes the enabled transports (REST, gRPC,
 // grpc-gateway, status) plus background workers and consumers into one flat

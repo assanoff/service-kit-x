@@ -1,6 +1,6 @@
-// Package deps wires the application's dependencies, mirroring the
-// lavka-promoaction app/deps layout: a Deps container of lazy dim.Provider
-// fields and an ordered Initializers slice. The generic app.InitDeps runs each
+// Package deps wires the application's dependencies: a Deps container of lazy
+// dim.Provider fields and an ordered Initializers slice. The generic
+// app.InitDeps runs each
 // initializer and registers its cleanup with the global closer (LIFO shutdown).
 package deps
 

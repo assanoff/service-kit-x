@@ -4,8 +4,8 @@
 // read from here instead of re-parsing headers — e.g. the translation middleware
 // takes the language via reqctx.Language, and error localization via the same.
 //
-// This is the application-level "parse once, read everywhere" pattern (cf.
-// chocodev/stories sdk/mid). It deliberately lives in the app, not the skit
+// This is the application-level "parse once, read everywhere" pattern. It
+// deliberately lives in the app, not the skit
 // SDK: the exact headers (X-Tenant-ID, X-City-ID, ...) are application-specific,
 // whereas the SDK packages stay generic and own their own context values
 // (auth.Principal, otel trace, i18n language) so they remain usable in isolation.

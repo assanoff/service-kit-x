@@ -9,7 +9,7 @@ import (
 )
 
 // orderByFields maps user's allowlisted order-by field names to SQL columns — the
-// db-layer allowlist (mirrors chocodev/stories internal/storygroup/db/order.go).
+// db-layer allowlist.
 // Only a column reachable through this map can land in ORDER BY, so a client
 // cannot inject an arbitrary column even though the field name is interpolated.
 var orderByFields = map[string]string{

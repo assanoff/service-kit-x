@@ -195,10 +195,10 @@ func (s *Store) QueryByCursor(ctx context.Context, filter user.QueryFilter, cur 
 }
 
 // whereConditions returns the SQL predicates for filter, binding each one's named
-// params into data — the chocodev/stories db-layer filter convention: optional
-// columns become :name predicates joined later under one WHERE. Returning the
-// slice (rather than writing the clause itself) lets QueryByCursor append the
-// keyset boundary before the WHERE is assembled.
+// params into data — the db-layer filter convention: optional columns become
+// :name predicates joined later under one WHERE. Returning the slice (rather than
+// writing the clause itself) lets QueryByCursor append the keyset boundary before
+// the WHERE is assembled.
 func (s *Store) whereConditions(filter user.QueryFilter, data map[string]any) []string {
 	var wc []string
 
