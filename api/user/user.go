@@ -23,7 +23,7 @@ import (
 	"github.com/assanoff/skit/page"
 	"github.com/assanoff/skit/query"
 	"github.com/assanoff/skit/rest"
-	"github.com/assanoff/skit/rest/restmid"
+	"github.com/assanoff/skit/rest/mid"
 
 	usercore "github.com/assanoff/skit-x/core/user"
 )
@@ -59,7 +59,7 @@ func (h *Handler) Routes(handle rest.Handle) {
 	handle("GET /users/cursor", h.queryCursor)
 	// A cacheable read: per-handler app middleware (the developer's choice) —
 	// Cache-Control + a conditional-GET ETag — without touching the other routes.
-	handle("GET /users/{id}", h.queryByID, restmid.CacheControl(60), restmid.ETag())
+	handle("GET /users/{id}", h.queryByID, mid.CacheControl(60), mid.ETag())
 
 	handle("POST /users", h.create, guard)
 	handle("PUT /users/{id}", h.update, guard)

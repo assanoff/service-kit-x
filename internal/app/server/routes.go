@@ -13,9 +13,9 @@ import (
 	"github.com/assanoff/skit/health"
 	"github.com/assanoff/skit/httplog"
 	"github.com/assanoff/skit/metrics"
+	"github.com/assanoff/skit/middleware"
 	"github.com/assanoff/skit/rest"
 	"github.com/assanoff/skit/rest/mid"
-	"github.com/assanoff/skit/rest/restmid"
 	"github.com/assanoff/skit/rest/router"
 	"github.com/assanoff/skit/translation/translationrest"
 	"github.com/prometheus/client_golang/prometheus"
@@ -45,9 +45,9 @@ func buildRouter(ctx context.Context, d *deps.Deps, m *metrics.Metrics, debug *d
 	//   - reqctx parses the cross-cutting request headers ONCE (language, tenant,
 	//     city) into the context; everything below reads from there instead of
 	//     re-parsing headers.
-	//   - restmid.LocalizeErrors localizes any *errs.Error response into the
+	//   - mid.LocalizeErrors localizes any *errs.Error response into the
 	//     request language (resolved by reqctx.Language).
-	//   - restmid.Chain bundles, in order: Metrics (errs-aware outcome counter) ->
+	//   - mid.Chain bundles, in order: Metrics (errs-aware outcome counter) ->
 	//     LocalizeErrors -> MaskInternal (hides 5xx detail from clients in
 	//     production) -> Errors (records 5xx on the trace span + logs them) ->
 	//     Panics (turns a handler panic into a clean Internal error).
@@ -59,11 +59,11 @@ func buildRouter(ctx context.Context, d *deps.Deps, m *metrics.Metrics, debug *d
 	// background paths uniformly.
 	//
 	// The app middleware is assembled as: reqctx (outermost — parses the language
-	// before anything reads it) -> restmid.Chain -> translationrest (innermost).
+	// before anything reads it) -> mid.Chain -> translationrest (innermost).
 	// Chain is the SDK-standard core; reqctx and translation are app-specific and
 	// wrap it.
 	appMids := []rest.MidFunc{reqctx.Middleware()}
-	appMids = append(appMids, restmid.Chain(restmid.Config{
+	appMids = append(appMids, mid.Chain(mid.Config{
 		Translator:   translator,
 		Lang:         reqctx.Language,
 		Logger:       log,
@@ -83,7 +83,7 @@ func buildRouter(ctx context.Context, d *deps.Deps, m *metrics.Metrics, debug *d
 		RecoverPanics: true,
 	}
 	r.Use(
-		mid.TraceRequest(tracer),
+		middleware.TraceRequest(tracer),
 		httplog.Middleware(log.Named("access"), httpLogOpts),
 	)
 
@@ -120,8 +120,8 @@ func Install(ctx context.Context, r *router.Router, d *deps.Deps, m *metrics.Met
 	// app middleware.
 	api := r.With(
 		m.Middleware(),
-		mid.Timeout(d.Opts.HTTP.RequestTimeout),
-		mid.SizeLimit(d.Opts.HTTP.BodySizeLimit),
+		middleware.Timeout(d.Opts.HTTP.RequestTimeout),
+		middleware.SizeLimit(d.Opts.HTTP.BodySizeLimit),
 	)
 	handle := api.HandleApp
 
@@ -177,7 +177,7 @@ func compactHandler(core *auditlog.Core, a config.Audit) rest.HandlerFunc {
 }
 
 // errorOutcomeRecorder registers an errs-aware outcome counter on the metrics
-// registry and returns the callback restmid.Metrics reports each request's code
+// registry and returns the callback mid.Metrics reports each request's code
 // to. Counts are labeled by domain code ("ok" for success), so /metrics exposes
 // the error rate by code, alongside the HTTP-status request metrics.
 func errorOutcomeRecorder(m *metrics.Metrics) func(code string) {
