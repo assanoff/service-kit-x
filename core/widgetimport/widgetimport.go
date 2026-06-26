@@ -5,7 +5,7 @@
 // It ties together three SDK pieces:
 //   - queue:  durable, SKIP LOCKED work queue (safe across replicas);
 //   - worker.Processor: the claim -> handle -> ack/retry loop;
-//   - sqldb.BulkInsert: efficient multi-row writes (via widget's store).
+//   - dbx.BulkInsert: efficient multi-row writes (via widget's store).
 //
 // Delivery is at-least-once, so Handle must be idempotent — the store's
 // BulkInsert uses ON CONFLICT DO NOTHING to make replays harmless.

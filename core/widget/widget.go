@@ -15,13 +15,13 @@ import (
 
 	"github.com/assanoff/servicekit/auditlog/auditbus"
 	"github.com/assanoff/servicekit/auth"
+	"github.com/assanoff/servicekit/dbx"
 	"github.com/assanoff/servicekit/errs"
 	"github.com/assanoff/servicekit/eventbus"
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/order"
 	"github.com/assanoff/servicekit/outbox"
 	"github.com/assanoff/servicekit/page"
-	"github.com/assanoff/servicekit/sqldb"
 )
 
 // Store is the persistence contract for widgets. The Core depends on this
@@ -124,7 +124,7 @@ func (c *Core) Create(ctx context.Context, nw NewWidget) (Widget, error) {
 		})
 	}
 	if err != nil {
-		if errors.Is(err, sqldb.ErrDBDuplicatedEntry) {
+		if errors.Is(err, dbx.ErrDBDuplicatedEntry) {
 			return Widget{}, errs.Newf(errs.AlreadyExists, "widget %q already exists", nw.Name).
 				WithMessageID("widget.already_exists").
 				WithArgs(map[string]any{"name": nw.Name})
@@ -163,7 +163,7 @@ func (c *Core) Count(ctx context.Context, filter QueryFilter) (int, error) {
 func (c *Core) QueryByID(ctx context.Context, id uuid.UUID) (Widget, error) {
 	w, err := c.store.QueryByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, sqldb.ErrDBNotFound) {
+		if errors.Is(err, dbx.ErrDBNotFound) {
 			return Widget{}, errs.Newf(errs.NotFound, "widget %s not found", id).
 				WithMessageID("widget.not_found").
 				WithArgs(map[string]any{"id": id.String()})
@@ -254,7 +254,7 @@ func auditActor(ctx context.Context) string {
 // Delete removes a widget.
 func (c *Core) Delete(ctx context.Context, id uuid.UUID) error {
 	if err := c.store.Delete(ctx, id); err != nil {
-		if errors.Is(err, sqldb.ErrDBNotFound) {
+		if errors.Is(err, dbx.ErrDBNotFound) {
 			return errs.Newf(errs.NotFound, "widget %s not found", id).
 				WithMessageID("widget.not_found").
 				WithArgs(map[string]any{"id": id.String()})

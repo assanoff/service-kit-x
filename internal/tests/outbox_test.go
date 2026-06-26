@@ -10,9 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/assanoff/servicekit/dbx"
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/outbox"
-	"github.com/assanoff/servicekit/sqldb"
 	"github.com/assanoff/servicekit/worker"
 
 	"github.com/assanoff/service-kit-x/internal/app/config"
@@ -210,7 +210,7 @@ func statusOf(t *testing.T, db *sqlx.DB, id uuid.UUID) string {
 // broker integration tests.
 func openTestDB(t *testing.T, cfg config.ServerOpts) *sqlx.DB {
 	t.Helper()
-	db, err := sqldb.Open(sqldb.Config{
+	db, err := dbx.Open(dbx.Config{
 		User: cfg.DB.User, Password: cfg.DB.Password, Host: cfg.DB.Host,
 		Name: cfg.DB.Name, Schema: cfg.DB.Schema,
 		DisableTLS: true, MaxIdleConns: 4, MaxOpenConns: 10,

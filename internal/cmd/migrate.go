@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/assanoff/servicekit/dbx"
 	"github.com/assanoff/servicekit/migrate"
-	"github.com/assanoff/servicekit/sqldb"
 
 	"github.com/assanoff/service-kit-x/internal/app/config"
 	"github.com/assanoff/service-kit-x/internal/migrations"
@@ -31,7 +31,7 @@ func (c *MigrateCommand) Execute(args []string) error {
 		direction = args[0]
 	}
 
-	db, err := sqldb.Open(sqldb.Config{
+	db, err := dbx.Open(dbx.Config{
 		User:         cfg.DB.User,
 		Password:     cfg.DB.Password,
 		Host:         cfg.DB.Host,
@@ -47,7 +47,7 @@ func (c *MigrateCommand) Execute(args []string) error {
 	defer func() { _ = db.Close() }()
 
 	ctx := context.Background()
-	if err := sqldb.StatusCheck(ctx, db); err != nil {
+	if err := dbx.StatusCheck(ctx, db); err != nil {
 		return fmt.Errorf("db status check: %w", err)
 	}
 

@@ -1,5 +1,5 @@
 // Package userdb is the Postgres implementation of user.Store. It maps between
-// the domain User and its database row and uses the servicekit sqldb helpers for
+// the domain User and its database row and uses the servicekit dbx helpers for
 // query logging and error translation, following the SDK pg-store convention
 // (inline const queries, a model.go row type, dialect-composed pagination).
 package userdb
@@ -14,11 +14,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/assanoff/servicekit/dbx"
+	"github.com/assanoff/servicekit/dbx/dialect"
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/order"
 	"github.com/assanoff/servicekit/page"
-	"github.com/assanoff/servicekit/sqldb"
-	"github.com/assanoff/servicekit/sqldb/dialect"
 
 	"github.com/assanoff/service-kit-x/core/user"
 )
@@ -58,7 +58,7 @@ func (s *Store) Create(ctx context.Context, u user.User) error {
 	const q = `
 		INSERT INTO users (id, email, name, created_at, updated_at)
 		VALUES (:id, :email, :name, :created_at, :updated_at)`
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBUser(u)); err != nil {
+	if err := dbx.NamedExecContext(ctx, s.log, s.db, q, toDBUser(u)); err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
 	return nil
@@ -70,7 +70,7 @@ func (s *Store) Update(ctx context.Context, u user.User) error {
 		UPDATE users
 		SET email = :email, name = :name, updated_at = :updated_at
 		WHERE id = :id`
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBUser(u)); err != nil {
+	if err := dbx.NamedExecContext(ctx, s.log, s.db, q, toDBUser(u)); err != nil {
 		return fmt.Errorf("update: %w", err)
 	}
 	return nil
@@ -82,7 +82,7 @@ func (s *Store) Delete(ctx context.Context, id uuid.UUID) error {
 	data := struct {
 		ID string `db:"id"`
 	}{ID: id.String()}
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
+	if err := dbx.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}
 	return nil
@@ -96,7 +96,7 @@ func (s *Store) QueryByID(ctx context.Context, id uuid.UUID) (user.User, error) 
 	}{ID: id.String()}
 
 	var row dbUser
-	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, data, &row); err != nil {
+	if err := dbx.NamedQueryStruct(ctx, s.log, s.db, q, data, &row); err != nil {
 		return user.User{}, fmt.Errorf("querybyid: %w", err)
 	}
 	return toCoreUser(row), nil
@@ -112,7 +112,7 @@ func (s *Store) Count(ctx context.Context, filter user.QueryFilter) (int, error)
 	var row struct {
 		N int `db:"n"`
 	}
-	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, buf.String(), data, &row); err != nil {
+	if err := dbx.NamedQueryStruct(ctx, s.log, s.db, buf.String(), data, &row); err != nil {
 		return 0, fmt.Errorf("count: %w", err)
 	}
 	return row.N, nil
@@ -138,7 +138,7 @@ func (s *Store) Query(ctx context.Context, filter user.QueryFilter, by order.By,
 	s.dialect.Paginate(buf)
 
 	var rows []dbUser
-	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
+	if err := dbx.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
 	return toCoreUsers(rows), nil
@@ -181,7 +181,7 @@ func (s *Store) QueryByCursor(ctx context.Context, filter user.QueryFilter, cur 
 	buf.WriteString(` ORDER BY created_at DESC, id DESC LIMIT :limit`)
 
 	var rows []dbUser
-	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
+	if err := dbx.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
 		return nil, "", fmt.Errorf("querybycursor: %w", err)
 	}
 

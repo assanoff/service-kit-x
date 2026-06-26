@@ -1,6 +1,6 @@
 // Package widgetdb is the Postgres implementation of widget.Store. It maps
 // between the domain Widget and its database representation and uses the
-// servicekit sqldb helpers for query logging and error translation.
+// servicekit dbx helpers for query logging and error translation.
 package widgetdb
 
 import (
@@ -13,11 +13,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/assanoff/servicekit/dbx"
+	"github.com/assanoff/servicekit/dbx/dialect"
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/order"
 	"github.com/assanoff/servicekit/page"
-	"github.com/assanoff/servicekit/sqldb"
-	"github.com/assanoff/servicekit/sqldb/dialect"
 
 	"github.com/assanoff/service-kit-x/core/widget"
 )
@@ -59,7 +59,7 @@ func (s *Store) Create(ctx context.Context, w widget.Widget) error {
 	const q = `
 		INSERT INTO widgets (id, name, description, created_at, updated_at)
 		VALUES (:id, :name, :description, :created_at, :updated_at)`
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBWidget(w)); err != nil {
+	if err := dbx.NamedExecContext(ctx, s.log, s.db, q, toDBWidget(w)); err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
 	return nil
@@ -71,7 +71,7 @@ func (s *Store) Update(ctx context.Context, w widget.Widget) error {
 		UPDATE widgets
 		SET name = :name, description = :description, updated_at = :updated_at
 		WHERE id = :id`
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBWidget(w)); err != nil {
+	if err := dbx.NamedExecContext(ctx, s.log, s.db, q, toDBWidget(w)); err != nil {
 		return fmt.Errorf("update: %w", err)
 	}
 	return nil
@@ -83,7 +83,7 @@ func (s *Store) Delete(ctx context.Context, id uuid.UUID) error {
 	data := struct {
 		ID string `db:"id"`
 	}{ID: id.String()}
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
+	if err := dbx.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}
 	return nil
@@ -97,7 +97,7 @@ func (s *Store) QueryByID(ctx context.Context, id uuid.UUID) (widget.Widget, err
 	}{ID: id.String()}
 
 	var row dbWidget
-	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, data, &row); err != nil {
+	if err := dbx.NamedQueryStruct(ctx, s.log, s.db, q, data, &row); err != nil {
 		return widget.Widget{}, fmt.Errorf("querybyid: %w", err)
 	}
 	return toCoreWidget(row), nil
@@ -117,7 +117,7 @@ func (s *Store) BulkInsert(ctx context.Context, ws []widget.Widget) error {
 		d := toDBWidget(w)
 		values = append(values, d.ID, d.Name, d.Description, d.CreatedAt, d.UpdatedAt)
 	}
-	if err := sqldb.BulkInsert(ctx, s.log, s.db, "widgets", columns, values, "ON CONFLICT (id) DO NOTHING"); err != nil {
+	if err := dbx.BulkInsert(ctx, s.log, s.db, "widgets", columns, values, "ON CONFLICT (id) DO NOTHING"); err != nil {
 		return fmt.Errorf("bulkinsert: %w", err)
 	}
 	return nil
@@ -133,7 +133,7 @@ func (s *Store) Count(ctx context.Context, filter widget.QueryFilter) (int, erro
 	var row struct {
 		N int `db:"n"`
 	}
-	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, buf.String(), data, &row); err != nil {
+	if err := dbx.NamedQueryStruct(ctx, s.log, s.db, buf.String(), data, &row); err != nil {
 		return 0, fmt.Errorf("count: %w", err)
 	}
 	return row.N, nil
@@ -160,7 +160,7 @@ func (s *Store) Query(ctx context.Context, filter widget.QueryFilter, by order.B
 	s.dialect.Paginate(buf)
 
 	var rows []dbWidget
-	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
+	if err := dbx.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
 	return toCoreWidgets(rows), nil
@@ -203,7 +203,7 @@ func (s *Store) QueryByCursor(ctx context.Context, filter widget.QueryFilter, cu
 	buf.WriteString(` ORDER BY created_at DESC, id DESC LIMIT :limit`)
 
 	var rows []dbWidget
-	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
+	if err := dbx.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
 		return nil, "", fmt.Errorf("querybycursor: %w", err)
 	}
 

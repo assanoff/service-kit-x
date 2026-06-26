@@ -14,9 +14,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/assanoff/servicekit/broker"
+	"github.com/assanoff/servicekit/dbx"
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/otel"
-	"github.com/assanoff/servicekit/sqldb"
 )
 
 // Recorder persists received events to the audit log.
@@ -71,7 +71,7 @@ func (r *Recorder) Handle(ctx context.Context, m broker.Message) broker.Action {
 		Payload []byte    `db:"payload"`
 	}{EventID: id, Type: m.Type, Payload: m.Data}
 
-	if err := sqldb.NamedExecContext(ctx, r.log, r.db, q, arg); err != nil {
+	if err := dbx.NamedExecContext(ctx, r.log, r.db, q, arg); err != nil {
 		span.RecordError(err)
 		r.log.Error(ctx, "widgetaudit: record failed, requeueing", "event_id", id, "err", err)
 		return broker.Requeue

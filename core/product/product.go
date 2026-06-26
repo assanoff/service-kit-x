@@ -11,11 +11,11 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/assanoff/servicekit/dbx"
 	"github.com/assanoff/servicekit/errs"
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/order"
 	"github.com/assanoff/servicekit/page"
-	"github.com/assanoff/servicekit/sqldb"
 )
 
 // Store is the persistence contract for products.
@@ -60,7 +60,7 @@ func (c *Core) Create(ctx context.Context, np NewProduct) (Product, error) {
 func (c *Core) QueryByID(ctx context.Context, id uuid.UUID) (Product, error) {
 	p, err := c.store.QueryByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, sqldb.ErrDBNotFound) {
+		if errors.Is(err, dbx.ErrDBNotFound) {
 			return Product{}, c.notFound(id)
 		}
 		return Product{}, errs.New(errs.Internal, err)
@@ -122,7 +122,7 @@ func (c *Core) Update(ctx context.Context, id uuid.UUID, up UpdateProduct) (Prod
 // Delete removes a product.
 func (c *Core) Delete(ctx context.Context, id uuid.UUID) error {
 	if err := c.store.Delete(ctx, id); err != nil {
-		if errors.Is(err, sqldb.ErrDBNotFound) {
+		if errors.Is(err, dbx.ErrDBNotFound) {
 			return c.notFound(id)
 		}
 		return errs.New(errs.Internal, err)

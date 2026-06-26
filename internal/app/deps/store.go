@@ -3,16 +3,16 @@ package deps
 import (
 	"context"
 
+	"github.com/assanoff/servicekit/dbx"
 	"github.com/assanoff/servicekit/dim"
 	"github.com/assanoff/servicekit/provider"
 	"github.com/assanoff/servicekit/queue"
-	"github.com/assanoff/servicekit/sqldb"
 )
 
 // initStore initializes the Postgres connection pool and assigns it to the
 // container, using the SDK's ready-made Postgres provider.
 var initStore = func(c *Deps) (cleanup dim.CleanupFunc, err error) {
-	c.DB, cleanup = dim.NewResource("Store", provider.Postgres(sqldb.Config{
+	c.DB, cleanup = dim.NewResource("Store", provider.Postgres(dbx.Config{
 		User:         c.Opts.DB.User,
 		Password:     c.Opts.DB.Password,
 		Host:         c.Opts.DB.Host,

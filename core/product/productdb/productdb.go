@@ -1,6 +1,6 @@
 // Package productdb is the Postgres implementation of product.Store, following
 // the SDK pg-store convention (inline const queries, a model.go row type,
-// dialect-composed pagination) and the servicekit sqldb helpers.
+// dialect-composed pagination) and the servicekit dbx helpers.
 package productdb
 
 import (
@@ -13,11 +13,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/assanoff/servicekit/dbx"
+	"github.com/assanoff/servicekit/dbx/dialect"
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/order"
 	"github.com/assanoff/servicekit/page"
-	"github.com/assanoff/servicekit/sqldb"
-	"github.com/assanoff/servicekit/sqldb/dialect"
 
 	"github.com/assanoff/service-kit-x/core/product"
 )
@@ -57,7 +57,7 @@ func (s *Store) Create(ctx context.Context, p product.Product) error {
 	const q = `
 		INSERT INTO products (id, name, price, created_at, updated_at)
 		VALUES (:id, :name, :price, :created_at, :updated_at)`
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBProduct(p)); err != nil {
+	if err := dbx.NamedExecContext(ctx, s.log, s.db, q, toDBProduct(p)); err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
 	return nil
@@ -69,7 +69,7 @@ func (s *Store) Update(ctx context.Context, p product.Product) error {
 		UPDATE products
 		SET name = :name, price = :price, updated_at = :updated_at
 		WHERE id = :id`
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, toDBProduct(p)); err != nil {
+	if err := dbx.NamedExecContext(ctx, s.log, s.db, q, toDBProduct(p)); err != nil {
 		return fmt.Errorf("update: %w", err)
 	}
 	return nil
@@ -81,7 +81,7 @@ func (s *Store) Delete(ctx context.Context, id uuid.UUID) error {
 	data := struct {
 		ID string `db:"id"`
 	}{ID: id.String()}
-	if err := sqldb.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
+	if err := dbx.NamedExecContext(ctx, s.log, s.db, q, data); err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}
 	return nil
@@ -95,7 +95,7 @@ func (s *Store) QueryByID(ctx context.Context, id uuid.UUID) (product.Product, e
 	}{ID: id.String()}
 
 	var row dbProduct
-	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, q, data, &row); err != nil {
+	if err := dbx.NamedQueryStruct(ctx, s.log, s.db, q, data, &row); err != nil {
 		return product.Product{}, fmt.Errorf("querybyid: %w", err)
 	}
 	return toCoreProduct(row), nil
@@ -111,7 +111,7 @@ func (s *Store) Count(ctx context.Context, filter product.QueryFilter) (int, err
 	var row struct {
 		N int `db:"n"`
 	}
-	if err := sqldb.NamedQueryStruct(ctx, s.log, s.db, buf.String(), data, &row); err != nil {
+	if err := dbx.NamedQueryStruct(ctx, s.log, s.db, buf.String(), data, &row); err != nil {
 		return 0, fmt.Errorf("count: %w", err)
 	}
 	return row.N, nil
@@ -137,7 +137,7 @@ func (s *Store) Query(ctx context.Context, filter product.QueryFilter, by order.
 	s.dialect.Paginate(buf)
 
 	var rows []dbProduct
-	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
+	if err := dbx.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
 	return toCoreProducts(rows), nil
@@ -180,7 +180,7 @@ func (s *Store) QueryByCursor(ctx context.Context, filter product.QueryFilter, c
 	buf.WriteString(` ORDER BY created_at DESC, id DESC LIMIT :limit`)
 
 	var rows []dbProduct
-	if err := sqldb.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
+	if err := dbx.NamedQuerySlice(ctx, s.log, s.db, buf.String(), data, &rows); err != nil {
 		return nil, "", fmt.Errorf("querybycursor: %w", err)
 	}
 

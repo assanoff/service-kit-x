@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/assanoff/servicekit/dbx"
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/page"
 	"github.com/assanoff/servicekit/queue"
-	"github.com/assanoff/servicekit/sqldb"
 	"github.com/assanoff/servicekit/worker"
 
 	"github.com/assanoff/service-kit-x/core/widget"
@@ -50,7 +50,7 @@ func TestWidgetImportEndpoint(t *testing.T) {
 
 	// Exactly one task is sitting in the queue (Handler builds deps but does not
 	// run the worker, so nothing drains it here).
-	db, err := sqldb.Open(sqldb.Config{
+	db, err := dbx.Open(dbx.Config{
 		User: cfg.DB.User, Password: cfg.DB.Password, Host: cfg.DB.Host,
 		Name: cfg.DB.Name, Schema: cfg.DB.Schema, DisableTLS: true,
 		MaxIdleConns: 2, MaxOpenConns: 5,
@@ -82,7 +82,7 @@ func TestWidgetImportQueue(t *testing.T) {
 	ctx := context.Background()
 	cfg := startPostgres(ctx, t)
 
-	db, err := sqldb.Open(sqldb.Config{
+	db, err := dbx.Open(dbx.Config{
 		User: cfg.DB.User, Password: cfg.DB.Password, Host: cfg.DB.Host,
 		Name: cfg.DB.Name, Schema: cfg.DB.Schema, DisableTLS: true,
 		MaxIdleConns: 4, MaxOpenConns: 10,
