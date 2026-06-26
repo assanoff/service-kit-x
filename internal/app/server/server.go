@@ -1,8 +1,9 @@
 // Package server assembles the application the lavka-promoaction way: it builds
 // the Deps container, runs app.InitDeps (which registers resource cleanups with
 // the global closer), then composes the enabled transports (REST, gRPC,
-// grpc-gateway, status) into a servicekit server.Set and supervises them via a
-// worker.Group. Each brick starts iff its Addr is set, so they run independently.
+// grpc-gateway, status) plus background workers and consumers into one flat
+// []worker.Runnable and supervises them via a worker.Group (through app.Run).
+// Each brick starts iff its Addr is set, so they run independently.
 // Resource shutdown is owned by the global closer; the caller runs
 // closer.CloseSync after Run returns.
 package server
@@ -23,9 +24,7 @@ import (
 	"github.com/assanoff/servicekit/logger"
 	"github.com/assanoff/servicekit/metrics"
 	"github.com/assanoff/servicekit/outbox"
-	"github.com/assanoff/servicekit/server"
 	"github.com/assanoff/servicekit/web/httpserver"
-	"github.com/assanoff/servicekit/web/rest"
 	"github.com/assanoff/servicekit/worker"
 
 	"github.com/assanoff/service-kit-x/core/widgetaudit"
@@ -34,9 +33,10 @@ import (
 	"github.com/assanoff/service-kit-x/internal/app/deps"
 )
 
-// App is the assembled application: the set of supervised servers and workers.
+// App is the assembled application: the flat set of supervised runnables —
+// servers, background workers and queue consumers, all worker.Runnables.
 type App struct {
-	set server.Set
+	runnables []worker.Runnable
 }
 
 // New builds the application: initializes dependencies (cleanups go to the
@@ -49,7 +49,7 @@ func New(ctx context.Context, opts config.ServerOpts, log *logger.Logger) (*App,
 	m := metrics.New("servicekit")
 
 	// Extra runnables: background workers + (optionally) the broker pipeline.
-	// They are supervised alongside the servers, after the four named bricks.
+	// They are supervised alongside the servers, appended after the transports.
 	var extra []worker.Runnable
 	if !opts.Worker.Disabled {
 		extra = append(extra,
@@ -75,34 +75,45 @@ func New(ctx context.Context, opts config.ServerOpts, log *logger.Logger) (*App,
 		return nil, err
 	}
 
-	// Compose the server set: REST, gRPC, grpc-gateway and the status server each
-	// run as independent worker.Runnables, each on its own listener. A brick is
-	// included only when its Addr is set (server.REST/Enabled/HTTP/Status return
-	// nil for an empty Addr), so an empty *_ADDR turns that transport off without
-	// a kill-switch flag. The status server lives on its own internal port so
-	// metrics and probes survive independently of REST (the REST router still
-	// exposes /healthz and /readyz for convenience — buildRouter with a nil debug
-	// config mounts the probes but not pprof/metrics).
-	set := server.Set{
-		REST: server.REST(rest.ServerConfig{
+	// Compose the supervised runnables as one flat slice: the REST API, gRPC,
+	// grpc-gateway and the status server each run as an independent worker.Runnable
+	// on its own listener, followed by the background workers and consumers. Each
+	// transport is appended only when its Addr is set — clearing an *_ADDR turns it
+	// off without a separate kill-switch flag (the addr-gating convention). The
+	// status server lives on its own internal port so metrics and probes survive
+	// independently of REST (the REST router still exposes /healthz and /readyz for
+	// convenience — buildRouter with a nil debug config mounts the probes but not
+	// pprof/metrics).
+	var runnables []worker.Runnable
+	if opts.HTTP.Addr != "" {
+		// The REST API is just an http.Handler supervised by the generic httpserver
+		// brick (Name "rest-server"); there is no dedicated REST server type.
+		runnables = append(runnables, httpserver.New(httpserver.Config{
+			Name:              "rest-server",
 			Addr:              opts.HTTP.Addr,
 			ReadHeaderTimeout: opts.HTTP.ReadHeaderTimeout,
 			ShutdownTimeout:   opts.HTTP.ShutdownTimeout,
 			Logger:            log.Slog(),
-		}, buildRouter(ctx, d, m, nil)),
-		GRPC:    server.Enabled(opts.GRPC.Addr, buildGRPCServer(ctx, opts.GRPC, d, m)),
-		Gateway: gateway,
-		Status: server.Status(debugsrv.Config{
+		}, buildRouter(ctx, d, m, nil)))
+	}
+	if opts.GRPC.Addr != "" {
+		runnables = append(runnables, buildGRPCServer(ctx, opts.GRPC, d, m))
+	}
+	if gateway != nil { // nil when the gateway or the gRPC server it proxies is off
+		runnables = append(runnables, gateway)
+	}
+	if opts.Debug.Addr != "" {
+		runnables = append(runnables, debugsrv.New(debugsrv.Config{
 			Addr:           opts.Debug.Addr,
 			Logger:         log.Slog(),
 			MetricsHandler: m.Handler(),
 			Liveness:       health.Liveness(),
 			Readiness:      readiness(d),
-		}),
-		Extra: extra,
+		}))
 	}
+	runnables = append(runnables, extra...)
 
-	return &App{set: set}, nil
+	return &App{runnables: runnables}, nil
 }
 
 // buildGateway builds the grpc-gateway brick — a JSON/HTTP proxy in front of the
@@ -123,7 +134,8 @@ func buildGateway(ctx context.Context, opts config.ServerOpts, d *deps.Deps, log
 		return nil, err
 	}
 	closer.Add(gw.Close)
-	return server.HTTP(httpserver.Config{
+	// Addr is non-empty here (guarded above), so httpserver.New returns a live brick.
+	return httpserver.New(httpserver.Config{
 		Name:            "gateway-server",
 		Addr:            opts.Gateway.Addr,
 		ShutdownTimeout: opts.GRPC.ShutdownTimeout,
@@ -150,10 +162,10 @@ func readiness(d *deps.Deps) http.Handler {
 
 // brokerWorkers builds the transactional-outbox workers (relay, sweeper,
 // cleaner) and the widget-audit consumer that together form the reliable
-// publish->consume pipeline, returning them as runnables for the server set's
-// Extra slice. Outbox metrics are registered on the shared registry m, so they
-// sit alongside the HTTP/gRPC and any business metrics on the same /metrics
-// endpoint without colliding (distinct servicekit_outbox_* names).
+// publish->consume pipeline, returning them as runnables for the supervised set.
+// Outbox metrics are registered on the shared registry m, so they sit alongside
+// the HTTP/gRPC and any business metrics on the same /metrics endpoint without
+// colliding (distinct servicekit_outbox_* names).
 func brokerWorkers(ctx context.Context, opts config.ServerOpts, d *deps.Deps, m *metrics.Metrics) ([]worker.Runnable, error) {
 	ob := d.Outbox(ctx)
 	om := outbox.NewMetrics(m.Registry)
@@ -184,7 +196,9 @@ func brokerWorkers(ctx context.Context, opts config.ServerOpts, d *deps.Deps, m 
 
 // Runnables returns the supervised transports and workers, ready to hand to
 // app.Run (which owns the signal context, worker.Group and closer lifecycle).
-func (a *App) Runnables() []worker.Runnable { return a.set.Runnables() }
+// The slice may contain nil entries for disabled (addr-gated) bricks; worker.Group.Add
+// skips them.
+func (a *App) Runnables() []worker.Runnable { return a.runnables }
 
 // Handler builds the REST handler (middleware + technical and business routes).
 // Exported so integration tests can drive the HTTP stack via httptest.
