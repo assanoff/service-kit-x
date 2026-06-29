@@ -13,7 +13,7 @@ import (
 	"github.com/assanoff/skit/dbx"
 	"github.com/assanoff/skit/logger"
 	"github.com/assanoff/skit/outbox"
-	"github.com/assanoff/skit/worker"
+	"github.com/assanoff/skit/retry"
 
 	"github.com/assanoff/skit-x/internal/app/config"
 )
@@ -33,7 +33,7 @@ func TestOutboxStoreFSM(t *testing.T) {
 
 	// Near-zero backoff so a retryable failure is immediately re-leasable.
 	store := outbox.NewPG(log, db, outbox.Options{
-		Backoff: worker.Backoff{Base: time.Millisecond, Factor: 1, Max: time.Millisecond},
+		Backoff: retry.Backoff{Base: time.Millisecond, Factor: 1, Max: time.Millisecond},
 	})
 
 	t.Run("insert lease and mark sent", func(t *testing.T) {

@@ -2,6 +2,7 @@ package deps
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/assanoff/skit/dim"
@@ -28,9 +29,11 @@ var initWidgetCore = func(c *Deps) (dim.CleanupFunc, error) {
 		opts := []widget.Option{widget.WithEventBus(c.Bus(ctx))}
 		if c.Opts.Broker.Enabled {
 			reg := outbox.NewRegistry()
-			outbox.Register[widget.Created](reg,
+			if err := outbox.Register[widget.Created](reg,
 				widget.EventWidgetCreated, c.Opts.Broker.Exchange,
-				outbox.WithKey(c.Opts.Broker.RoutingKey))
+				outbox.WithKey(c.Opts.Broker.RoutingKey)); err != nil {
+				return nil, fmt.Errorf("register widget.created route: %w", err)
+			}
 			opts = append(opts, widget.WithOutbox(c.DB(ctx), c.Outbox(ctx), reg))
 		}
 		return widget.NewCore(c.Logger, store, opts...), nil

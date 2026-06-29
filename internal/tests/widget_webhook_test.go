@@ -14,7 +14,7 @@ import (
 	"github.com/assanoff/skit/eventbus"
 	"github.com/assanoff/skit/httpmw"
 	"github.com/assanoff/skit/logger"
-	"github.com/assanoff/skit/worker"
+	"github.com/assanoff/skit/retry"
 
 	"github.com/assanoff/skit-x/core/widget"
 	"github.com/assanoff/skit-x/core/widget/widgetdb"
@@ -60,7 +60,7 @@ func TestWidgetWebhookHTTPMW(t *testing.T) {
 	client := &http.Client{
 		Timeout: 2 * time.Second,
 		Transport: httpmw.NewRetryTransport(nil, httpmw.RetryConfig{
-			Backoff: worker.Backoff{
+			Backoff: retry.Backoff{
 				Base: 10 * time.Millisecond, Max: 100 * time.Millisecond,
 				MaxAttempts: 4, Jitter: 0.1,
 			},

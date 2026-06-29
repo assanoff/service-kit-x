@@ -7,7 +7,7 @@ import (
 	"github.com/assanoff/skit/dim"
 	"github.com/assanoff/skit/eventbus"
 	"github.com/assanoff/skit/httpmw"
-	"github.com/assanoff/skit/worker"
+	"github.com/assanoff/skit/retry"
 
 	"github.com/assanoff/skit-x/core/widgetwebhook"
 )
@@ -25,7 +25,7 @@ var initBus = func(c *Deps) (dim.CleanupFunc, error) {
 		client := &http.Client{
 			Timeout: w.Timeout,
 			Transport: httpmw.NewRetryTransport(nil, httpmw.RetryConfig{
-				Backoff: worker.Backoff{
+				Backoff: retry.Backoff{
 					Base:        w.BackoffBase,
 					Max:         w.BackoffMax,
 					MaxAttempts: w.MaxAttempts,
